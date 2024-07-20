@@ -2,12 +2,13 @@ import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommonService } from './common.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
 
 @Global()
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: `.env-${process.env.NODE_ENV}`, // 환경에 맞는 .env 파일 지정
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
@@ -24,6 +25,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         synchronize: config.get<boolean>('DATABASE_SYNCHRONIZE'),
       }),
     }),
+    AuthModule,
+    UserModule,
   ],
   providers: [CommonService],
   exports: [CommonService, TypeOrmModule],
