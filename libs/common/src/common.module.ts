@@ -1,9 +1,10 @@
 import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CommonService } from './common.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { PrismaService } from './prisma/prisma.service';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Global()
 @Module({
@@ -27,8 +28,9 @@ import { UserModule } from './user/user.module';
     }),
     AuthModule,
     UserModule,
+    PrismaModule,
   ],
-  providers: [CommonService],
-  exports: [CommonService, TypeOrmModule],
+  providers: [PrismaService],
+  exports: [TypeOrmModule],
 })
 export class CommonModule {}
