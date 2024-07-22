@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { RestApiModule } from './../src/rest-api.module';
+import { RestApiModule } from '../src/rest-api.module';
 
 describe('RestApiController (e2e)', () => {
   let app: INestApplication;
