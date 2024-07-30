@@ -2,7 +2,8 @@
 /dist
 /node_modules
 /build
-
+./yarn.lock
+./package-lock.json
 # Logs
 logs
 *.log
@@ -21,6 +22,7 @@ lerna-debug.log*
 
 # IDEs and editors
 /.idea
+./.run
 .project
 .classpath
 .c9/
