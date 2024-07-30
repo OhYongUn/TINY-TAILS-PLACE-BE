@@ -7,6 +7,8 @@ export class UsersController {
 
   @Get('')
   async findAll() {
+    console.log('user', this.prisma.user.findMany());
+
     return this.prisma.user.findMany();
   }
 }
