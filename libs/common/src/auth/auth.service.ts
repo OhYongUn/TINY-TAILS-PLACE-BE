@@ -1,62 +1,56 @@
-import { Injectable } from '@nestjs/common';
-import { UserService } from '../user/user.service';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import ms from 'ms';
+import * as bcryptjs from 'bcryptjs';
+import { User } from '@prisma/client';
+import { Response } from 'express';
+import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
+import { TokenPayload } from './token-payload.interface';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UserService,
-    private jwtService: JwtService,
-    private configService: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async validateUserById(userId: number): Promise<any> {
-    return await this.usersService.findOneById(userId);
-  }
+  async login(user: User, response: Response) {
+    const expires = new Date();
+    expires.setMilliseconds(
+      expires.getMilliseconds() +
+        ms(this.configService.getOrThrow<string>('JWT_EXPIRATION')),
+    );
 
-  async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.findOneByEmail(email);
-    if (user && (await bcrypt.compare(pass, user.password))) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...result } = user;
-      return result; // 비밀번호를 제외한 사용자 정보 반환
-    }
-    return null; // 인증 실패시 null 반환
-  }
-
-  async login(user: any) {
-    const payload = { email: user.email, sub: user.id };
-    const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_ACCESS_TOKEN_SECRET'),
-      expiresIn: '15m',
-    });
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET'),
-      expiresIn: '7d',
-    });
-    // 여기에 리프레쉬 토큰을 데이터베이스에 저장하는 로직 추가
-    return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
+    const tokenPayload: TokenPayload = {
+      userId: user.id,
     };
+    const token = this.jwtService.sign(tokenPayload);
+
+    response.cookie('Authentication', token, {
+      secure: true,
+      httpOnly: true,
+      expires,
+    });
+
+    return { tokenPayload };
   }
 
-  async refreshToken(token: string) {
+  async verifyUser(email: string, password: string) {
     try {
-      const decoded = this.jwtService.verify(token, {
-        secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET'),
-      });
-      const payload = { email: decoded.email, sub: decoded.sub };
-      return {
-        access_token: this.jwtService.sign(payload, {
-          secret: this.configService.get<string>('JWT_ACCESS_TOKEN_SECRET'),
-          expiresIn: '15m',
-        }),
-      };
-    } catch (e) {
-      throw new Error('Invalid token');
+      const user = await this.usersService.getUser({ email });
+      const authenticated = await bcryptjs.compare(password, user.password);
+      if (!authenticated) {
+        throw new UnauthorizedException();
+      }
+      return user;
+    } catch (err) {
+      throw new UnauthorizedException('Credentials are not valid.');
     }
+  }
+
+  verifyToken(jwt: string) {
+    this.jwtService.verify(jwt);
   }
 }
