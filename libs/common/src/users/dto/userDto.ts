@@ -1,11 +1,13 @@
 import {
+  IsDate,
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsStrongPassword,
 } from 'class-validator';
 
-export class CreateUserRequest {
+export class UserDto {
   @IsNotEmpty()
   @IsString()
   name: string;
@@ -15,4 +17,12 @@ export class CreateUserRequest {
 
   @IsStrongPassword()
   password: string;
+
+  @IsOptional()
+  @IsString()
+  currentRefreshToken: string;
+
+  @IsOptional()
+  @IsDate()
+  currentRefreshTokenExp: Date;
 }
