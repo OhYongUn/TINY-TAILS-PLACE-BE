@@ -16,13 +16,13 @@ export class UsersService {
     private readonly configService: ConfigService,
   ) {}
 
-  async createUser(data: UserDto): Promise<Partial<User>> {
+  async createUser(UserDto: UserDto): Promise<Partial<User>> {
     try {
       return await this.prismaService.user.create({
         data: {
-          name: data.name,
-          email: data.email,
-          password: await bcryptjs.hash(data.password, 10),
+          name: UserDto.name,
+          email: UserDto.email,
+          password: await bcryptjs.hash(UserDto.password, 10),
         },
         select: {
           id: true,
