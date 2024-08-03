@@ -3,7 +3,7 @@
     <package-json value="$PROJECT_DIR$/package.json" />
     <command value="run" />
     <scripts>
-      <script value="start:rest-api" />
+      <script value="start:debug:rest-api" />
     </scripts>
     <node-interpreter value="project" />
     <package-manager value="yarn" />
