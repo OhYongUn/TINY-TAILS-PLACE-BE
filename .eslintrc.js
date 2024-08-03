@@ -6,6 +6,7 @@ module.exports = {
       './apps/batch/tsconfig.app.json',
       './apps/websoket/tsconfig.app.json',
       './libs/common/tsconfig.lib.json',
+      './libs/common/tsconfig.spec.json',
     ],
     tsconfigRootDir: __dirname,
     sourceType: 'module',
