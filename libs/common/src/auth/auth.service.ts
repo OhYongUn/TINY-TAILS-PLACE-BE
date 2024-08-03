@@ -3,20 +3,26 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AccessTokenPayloadDto } from './dto/accessTokenPayload.dto';
 import { RefreshTokenPayloadDto } from './dto/refreshTokenPayload.dto';
-import { loginTokenDataDto } from './dto/loginTokenData.dto';
 import { RefreshTokenDto } from './dto/refreshToken.dto';
 import { NewAccessTokenDto } from './dto/newAccessToken.dto';
 import { UsersService } from '@app/common/users/users.service';
 import { User } from '@prisma/client';
-import { UserDto } from '@app/common/users/dto/userDto';
 import { ConfigService } from '@nestjs/config';
+import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
+import { UserResponseDto } from '@app/common/users/dto/UserResponseDto';
+import { CreateUserDto } from '@app/common/users/dto/CreateUserDto';
+
+const DEFAULT_ACCESS_TOKEN_SECRET = 'default_access_token_secret';
+const DEFAULT_REFRESH_TOKEN_SECRET = 'default_refresh_token_secret';
+const DEFAULT_ACCESS_TOKEN_EXPIRATION = 3600; // 1 hour
+const DEFAULT_REFRESH_TOKEN_EXPIRATION = 86400; // 24 hours
 
 @Injectable()
 export class AuthService {
   private readonly accessTokenSecret: string;
   private readonly refreshTokenSecret: string;
-  private readonly accessTokenExpired: string;
-  private readonly refreshTokenExpired: string;
+  private readonly accessTokenExpiration: number;
+  private readonly refreshTokenExpiration: number;
 
   constructor(
     private readonly usersService: UsersService,
@@ -25,24 +31,24 @@ export class AuthService {
   ) {
     this.accessTokenSecret = this.configService.get<string>(
       'JWT_ACCESS_TOKEN_SECRET',
-      'default_access_token_secret',
+      DEFAULT_ACCESS_TOKEN_SECRET,
     );
     this.refreshTokenSecret = this.configService.get<string>(
       'JWT_REFRESH_SECRET',
-      'default_refresh_token_secret',
+      DEFAULT_REFRESH_TOKEN_SECRET,
     );
-    this.accessTokenExpired = this.configService.get<string>(
+    this.accessTokenExpiration = this.configService.get<number>(
       'JWT_ACCESS_EXPIRES',
-      '3600',
-    ); // default to 3600 seconds
-    this.refreshTokenExpired = this.configService.get<string>(
+      DEFAULT_ACCESS_TOKEN_EXPIRATION,
+    );
+    this.refreshTokenExpiration = this.configService.get<number>(
       'JWT_REFRESH_EXPIRES',
-      '86400',
-    ); // default to 86400 seconds
+      DEFAULT_REFRESH_TOKEN_EXPIRATION,
+    );
   }
 
-  async register(UserDto: UserDto) {
-    await this.usersService.createUser(UserDto);
+  async register(CreateUserDto: CreateUserDto): Promise<void> {
+    await this.usersService.createUser(CreateUserDto);
   }
 
   async validateUser(email: string, password: string): Promise<User> {
@@ -51,8 +57,8 @@ export class AuthService {
       throw new UnauthorizedException('User not found.');
     }
 
-    const equalPassword = await bcrypt.compare(password, user.password);
-    if (!equalPassword) {
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
@@ -66,42 +72,50 @@ export class AuthService {
     };
     return this.jwtService.sign(payload, {
       secret: this.accessTokenSecret,
-      expiresIn: this.accessTokenExpired,
+      expiresIn: this.accessTokenExpiration,
     });
   }
 
   async getRefreshToken(user: User): Promise<string> {
     const payload: RefreshTokenPayloadDto = {
-      userEmail: user.userEmail,
+      userEmail: user.email,
     };
     return this.jwtService.sign(payload, {
       secret: this.refreshTokenSecret,
-      expiresIn: this.refreshTokenExpired,
+      expiresIn: this.refreshTokenExpiration,
     });
   }
 
   async refresh(refreshTokenDto: RefreshTokenDto): Promise<NewAccessTokenDto> {
     const { refreshToken } = refreshTokenDto;
-    const { userId } = await this.jwtService.verify(refreshToken, {
-      secret: this.refreshTokenSecret,
-    });
-    const user = await this.usersService.getUserForRefreshToken(
-      userId,
-      refreshToken,
-    );
-    const newAccessToken = await this.getAccessToken(user);
-    return { newAccessToken };
+    try {
+      const { userEmail } = await this.jwtService.verify(refreshToken, {
+        secret: this.refreshTokenSecret,
+      });
+      const user = await this.usersService.getUserForRefreshToken(
+        userEmail,
+        refreshToken,
+      );
+      const newAccessToken = await this.getAccessToken(user);
+      return { newAccessToken };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 
-  async login(user: User): Promise<loginTokenDataDto> {
+  async login(user: User): Promise<LoginResponseDto> {
     const accessToken: string = await this.getAccessToken(user);
     const refreshToken: string = await this.getRefreshToken(user);
     await this.usersService.setCurrentRefreshToken(user.email, refreshToken);
 
-    return {
-      accessToken,
-      refreshToken,
+    const UserResponseDto: UserResponseDto = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
     };
+    const data = { accessToken, refreshToken, user: UserResponseDto };
+    console.log('data', data);
+    return data;
   }
 
   async logout(email: string): Promise<void> {

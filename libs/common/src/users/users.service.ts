@@ -1,13 +1,14 @@
 import {
   Injectable,
+  InternalServerErrorException,
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import * as bcryptjs from 'bcryptjs';
-import { UserDto } from './dto/userDto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
+import { CreateUserDto } from '@app/common/users/dto/CreateUserDto';
 
 @Injectable()
 export class UsersService {
@@ -16,13 +17,13 @@ export class UsersService {
     private readonly configService: ConfigService,
   ) {}
 
-  async createUser(UserDto: UserDto): Promise<Partial<User>> {
+  async createUser(data: CreateUserDto): Promise<Partial<User>> {
     try {
       return await this.prismaService.user.create({
         data: {
-          name: UserDto.name,
-          email: UserDto.email,
-          password: await bcryptjs.hash(UserDto.password, 10),
+          name: data.name,
+          email: data.email,
+          password: await bcryptjs.hash(data.password, 10),
         },
         select: {
           id: true,
@@ -34,25 +35,14 @@ export class UsersService {
       if (err.code === 'P2002') {
         throw new UnprocessableEntityException('Email already exists.');
       }
-      throw err;
+      // 다른 종류의 에러에 대해서도 적절한 처리를 추가할 수 있습니다.
+      throw new InternalServerErrorException('User creation failed');
     }
   }
 
   async getUser(filter: Prisma.UserWhereUniqueInput): Promise<User> {
     return this.prismaService.user.findUniqueOrThrow({
       where: filter,
-    });
-  }
-
-  async setCurrentRefreshToken(
-    email: string,
-    refreshToken: string,
-  ): Promise<void> {
-    const currentRefreshToken = await this.getHashedRefreshToken(refreshToken);
-    const currentRefreshTokenExp = this.getRefreshTokenExp();
-    await this.updateUser(email, {
-      currentRefreshToken,
-      currentRefreshTokenExp,
     });
   }
 
@@ -67,11 +57,24 @@ export class UsersService {
     return bcryptjs.hash(refreshToken, 10);
   }
 
+  async setCurrentRefreshToken(
+    email: string,
+    refreshToken: string,
+  ): Promise<void> {
+    const currentRefreshToken = await this.getHashedRefreshToken(refreshToken);
+    const currentRefreshTokenExp = this.getRefreshTokenExp();
+    await this.updateUser(email, {
+      currentRefreshToken,
+      currentRefreshTokenExp,
+    });
+  }
+
   getRefreshTokenExp(): Date {
     const now = new Date();
-    const refreshTokenExp =
-      this.configService.get<number>('JWT_REFRESH_EXPIRATION')! * 1000;
-    return new Date(now.getTime() + refreshTokenExp);
+    const expirationTime =
+      this.configService.get<number>('JWT_REFRESH_EXPIRATION') ||
+      7 * 24 * 60 * 60; // 기본값 7일
+    return new Date(now.getTime() + expirationTime * 1000);
   }
 
   async getUserForRefreshToken(
