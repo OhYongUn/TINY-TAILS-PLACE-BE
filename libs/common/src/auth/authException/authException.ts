@@ -1,8 +1,10 @@
 import { ErrorCode } from './errorCode';
 
 export class AuthException extends Error {
-  constructor(errorCode: ErrorCode, message?: string) {
-    if (!message) message = errorCode.message;
-    super(message);
+  constructor(
+    public errorCode: ErrorCode,
+    message?: string,
+  ) {
+    super(message || errorCode.message);
   }
 }

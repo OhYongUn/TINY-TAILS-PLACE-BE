@@ -1,6 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -9,9 +10,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from '@app/common/users/dto/CreateUserDto';
+import { UserNotFoundException } from '@app/common/auth/authException/authExceptions';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+  private readonly DEFAULT_REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60; // 7 days in seconds
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
@@ -32,18 +38,25 @@ export class UsersService {
         },
       });
     } catch (err: any) {
-      if (err.code === 'P2002') {
+      if (
+        err instanceof PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
         throw new UnprocessableEntityException('Email already exists.');
       }
-      // 다른 종류의 에러에 대해서도 적절한 처리를 추가할 수 있습니다.
+      this.logger.error(`User creation failed: ${err.message}`, err.stack);
       throw new InternalServerErrorException('User creation failed');
     }
   }
 
   async getUser(filter: Prisma.UserWhereUniqueInput): Promise<User> {
-    return this.prismaService.user.findUniqueOrThrow({
-      where: filter,
-    });
+    this.logger.log(`사용자 검색 시도: ${JSON.stringify(filter)}`);
+    const user = await this.prismaService.user.findUnique({ where: filter });
+    if (!user) {
+      this.logger.warn(`사용자를 찾을 수 없음: ${JSON.stringify(filter)}`);
+      throw new UserNotFoundException(filter.email as string);
+    }
+    return user;
   }
 
   async removeCurrentRefreshToken(email: string): Promise<void> {
@@ -73,7 +86,8 @@ export class UsersService {
     const now = new Date();
     const expirationTime =
       this.configService.get<number>('JWT_REFRESH_EXPIRATION') ||
-      7 * 24 * 60 * 60; // 기본값 7일
+      this.DEFAULT_REFRESH_TOKEN_EXPIRATION;
+
     return new Date(now.getTime() + expirationTime * 1000);
   }
 
@@ -82,7 +96,7 @@ export class UsersService {
     refreshToken: string,
   ): Promise<User> {
     const user = await this.getUser({ email });
-    if (!user.currentRefreshToken) {
+    if (!user || !user.currentRefreshToken) {
       throw new UnauthorizedException('Refresh token not found.');
     }
     const refreshTokenCompare = await bcryptjs.compare(
@@ -92,6 +106,9 @@ export class UsersService {
     if (!refreshTokenCompare) {
       throw new UnauthorizedException('Refresh token is invalid.');
     }
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
     return user;
   }
 
@@ -99,9 +116,14 @@ export class UsersService {
     email: string,
     data: Prisma.UserUpdateInput,
   ): Promise<void> {
-    await this.prismaService.user.update({
-      where: { email },
-      data,
-    });
+    try {
+      await this.prismaService.user.update({
+        where: { email },
+        data,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to update user: ${email}`, error.stack);
+      throw new InternalServerErrorException('Failed to update user');
+    }
   }
 }

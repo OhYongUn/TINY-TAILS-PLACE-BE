@@ -8,6 +8,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { AccessTokenStrategy } from '@app/common/auth/strategies/accessToken.strategy';
 import { RefreshTokenStrategy } from '@app/common/auth/strategies/refreshToken.strategy';
 import { PassportModule } from '@nestjs/passport';
+import { AuthExceptionFilter } from '@app/common/auth/authException/authExceptionFilter';
 
 @Module({
   imports: [
@@ -31,6 +32,10 @@ import { PassportModule } from '@nestjs/passport';
     LocalStrategy,
     AccessTokenStrategy,
     RefreshTokenStrategy,
+    {
+      provide: 'APP_FILTER',
+      useClass: AuthExceptionFilter,
+    },
   ],
 })
 export class AuthModule {}

@@ -5,6 +5,8 @@ import {
   HttpStatus,
   Post,
   Req,
+  UnauthorizedException,
+  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -14,13 +16,20 @@ import { User } from '@prisma/client';
 import { CreateUserDto } from '@app/common/users/dto/CreateUserDto';
 import { ApiResponse } from '@app/common/interface/ApiResponse';
 import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
+import { AuthExceptionFilter } from '@app/common/auth/authException/authExceptionFilter';
+import {
+  PasswordWrongException,
+  UserAlreadyExistException,
+  UserNotFoundException,
+} from '@app/common/auth/authException/authExceptions';
+import { RefreshTokenDto } from '@app/common/auth/dto/refreshToken.dto';
 
 interface RequestWithUser extends Request {
   user: User;
 }
 
-Controller('auth');
-
+@UseFilters(AuthExceptionFilter)
+@Controller('auth') // 'auth'는 이 컨트롤러의 라우트 접두사입니다.
 export class AuthController {
   constructor(private authService: AuthService) {}
 
@@ -29,8 +38,17 @@ export class AuthController {
   async register(
     @Body() createUserDto: CreateUserDto,
   ): Promise<ApiResponse<void>> {
-    await this.authService.register(createUserDto);
-    return { success: true };
+    try {
+      await this.authService.register(createUserDto);
+      return { success: true };
+    } catch (error) {
+      if (error instanceof UserAlreadyExistException) {
+        throw error;
+      }
+      throw new UserAlreadyExistException(
+        'Registration failed. Please try again.',
+      );
+    }
   }
 
   @UseGuards(LocalGuard)
@@ -39,7 +57,48 @@ export class AuthController {
   async login(
     @Req() req: RequestWithUser,
   ): Promise<ApiResponse<LoginResponseDto>> {
-    const loginResponse = await this.authService.login(req.user);
-    return { success: true, data: loginResponse };
+    try {
+      const loginResponse = await this.authService.login(req.user);
+      return { success: true, data: loginResponse };
+    } catch (error) {
+      if (
+        error instanceof PasswordWrongException ||
+        error instanceof UserNotFoundException
+      ) {
+        throw error;
+      }
+      throw new PasswordWrongException(
+        'Login failed. Please check your credentials.',
+      );
+    }
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Body() refreshTokenDto: RefreshTokenDto,
+  ): Promise<ApiResponse<{ accessToken: string }>> {
+    try {
+      const newAccessToken = await this.authService.refresh(refreshTokenDto);
+      return {
+        success: true,
+        data: { accessToken: newAccessToken.accessToken },
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(
+    @Body() logoutDto: { email: string },
+  ): Promise<ApiResponse<void>> {
+    try {
+      await this.authService.logout(logoutDto.email);
+      return { success: true };
+    } catch (error) {
+      throw new UnauthorizedException('Logout failed');
+    }
   }
 }

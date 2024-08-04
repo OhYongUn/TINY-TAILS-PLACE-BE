@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AccessTokenPayloadDto } from './dto/accessTokenPayload.dto';
@@ -11,6 +11,10 @@ import { ConfigService } from '@nestjs/config';
 import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
 import { UserResponseDto } from '@app/common/users/dto/UserResponseDto';
 import { CreateUserDto } from '@app/common/users/dto/CreateUserDto';
+import {
+  PasswordWrongException,
+  UserNotFoundException,
+} from '@app/common/auth/authException/authExceptions';
 
 const DEFAULT_ACCESS_TOKEN_SECRET = 'default_access_token_secret';
 const DEFAULT_REFRESH_TOKEN_SECRET = 'default_refresh_token_secret';
@@ -23,6 +27,7 @@ export class AuthService {
   private readonly refreshTokenSecret: string;
   private readonly accessTokenExpiration: number;
   private readonly refreshTokenExpiration: number;
+  private readonly logger = new Logger(AuthService.name);
 
   constructor(
     private readonly usersService: UsersService,
@@ -54,14 +59,12 @@ export class AuthService {
   async validateUser(email: string, password: string): Promise<User> {
     const user = await this.usersService.getUser({ email });
     if (!user) {
-      throw new UnauthorizedException('User not found.');
+      throw new UserNotFoundException(`존재하지않는 사용자입니다.`);
     }
-
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials.');
+      throw new PasswordWrongException('비밀번호가 틀렸습니다.');
     }
-
     return user;
   }
 
@@ -96,8 +99,8 @@ export class AuthService {
         userEmail,
         refreshToken,
       );
-      const newAccessToken = await this.getAccessToken(user);
-      return { newAccessToken };
+      const accessToken = await this.getAccessToken(user);
+      return { accessToken }; // NewAccessTokenDto 형식에 맞게 반환
     } catch (error) {
       throw new UnauthorizedException('Invalid refresh token');
     }

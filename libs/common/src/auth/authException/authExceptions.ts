@@ -2,53 +2,33 @@ import { AuthExceptionCode } from './error.constants';
 import { ErrorCode } from './errorCode';
 import { AuthException } from './authException';
 
-function createAuthException(statusCode: number, defaultMessage: string) {
-  return function (message?: string) {
+class CustomAuthException extends AuthException {
+  constructor(statusCode: number, defaultMessage: string, message?: string) {
     const errorCode = new ErrorCode(statusCode, defaultMessage);
-    return new AuthException(errorCode, message);
-  };
+    super(errorCode, message);
+  }
 }
 
-export const UserNotFoundException = createAuthException(
-  AuthExceptionCode.UserNotFound,
-  'user is not exist',
-);
+export class UserNotFoundException extends CustomAuthException {
+  constructor(message?: string) {
+    super(AuthExceptionCode.UserNotFound, 'user is not exist', message);
+  }
+}
 
-export const UserAlreadyExistException = createAuthException(
-  AuthExceptionCode.UserAlreadyExist,
-  'user is already exist',
-);
+export class UserAlreadyExistException extends CustomAuthException {
+  constructor(message?: string) {
+    super(AuthExceptionCode.UserAlreadyExist, 'user is already exist', message);
+  }
+}
 
-export const PasswordWrongException = createAuthException(
-  AuthExceptionCode.PasswordWrong,
-  'password is wrong',
-);
+export class PasswordWrongException extends CustomAuthException {
+  constructor(message?: string) {
+    super(AuthExceptionCode.PasswordWrong, 'password is wrong', message);
+  }
+}
 
-export const OverRetryException = createAuthException(
-  AuthExceptionCode.OverRetry,
-  'too many retry',
-);
-
-// export const UserNotFoundException = (message?: string) => {
-//     const statusCode: number = AuthExceptionCode.UserNotFound;
-//     const errorCode = new ErrorCode(statusCode, "user is not exist");
-//     return new AuthException(errorCode, message);
-// }
-
-// export const UserAlreadyExistException = (message?: string) => {
-//     const statusCode: number = AuthExceptionCode.UserAlreadyExist;
-//     const errorCode = new ErrorCode(statusCode, "user is already exist");
-//     return new AuthException(errorCode, message);
-// }
-
-// export const PasswordWrongException = (message?: string) => {
-//     const statusCode: number = AuthExceptionCode.PasswordWrong;
-//     const errorCode = new ErrorCode(statusCode, "password is wrong");
-//     return new AuthException(errorCode, message);
-// }
-
-// export const OverRetryException = (message?: string) => {
-//     const statusCode: number = AuthExceptionCode.OverRetry;
-//     const errorCode = new ErrorCode(statusCode, "too many retry");
-//     return new AuthException(errorCode, message);
-// }
+export class OverRetryException extends CustomAuthException {
+  constructor(message?: string) {
+    super(AuthExceptionCode.OverRetry, 'too many retry', message);
+  }
+}
