@@ -1,0 +1,113 @@
+-- CreateTable
+CREATE TABLE "ROOM" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "capacity" INTEGER NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
+    "size" DOUBLE PRECISION NOT NULL,
+    "imageUrls" TEXT[],
+    "available" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ROOM_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "BOOKING" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "roomId" INTEGER NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3) NOT NULL,
+    "petCount" INTEGER NOT NULL,
+    "totalPrice" DOUBLE PRECISION NOT NULL,
+    "status" TEXT NOT NULL,
+    "specialRequests" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "BOOKING_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PRODUCT" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
+    "category" TEXT NOT NULL,
+    "imageUrl" TEXT NOT NULL,
+    "stockQuantity" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PRODUCT_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ORDER" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "totalAmount" DOUBLE PRECISION NOT NULL,
+    "status" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ORDER_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ORDER_ITEM" (
+    "id" SERIAL NOT NULL,
+    "orderId" INTEGER NOT NULL,
+    "productId" INTEGER NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
+
+    CONSTRAINT "ORDER_ITEM_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PAYMENT" (
+    "id" SERIAL NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "status" TEXT NOT NULL,
+    "method" TEXT NOT NULL,
+    "bookingId" INTEGER,
+    "orderId" INTEGER,
+    "transactionId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PAYMENT_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PAYMENT_bookingId_key" ON "PAYMENT"("bookingId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PAYMENT_orderId_key" ON "PAYMENT"("orderId");
+
+-- AddForeignKey
+ALTER TABLE "BOOKING" ADD CONSTRAINT "BOOKING_userId_fkey" FOREIGN KEY ("userId") REFERENCES "USER"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BOOKING" ADD CONSTRAINT "BOOKING_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "ROOM"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ORDER" ADD CONSTRAINT "ORDER_userId_fkey" FOREIGN KEY ("userId") REFERENCES "USER"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ORDER_ITEM" ADD CONSTRAINT "ORDER_ITEM_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "ORDER"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ORDER_ITEM" ADD CONSTRAINT "ORDER_ITEM_productId_fkey" FOREIGN KEY ("productId") REFERENCES "PRODUCT"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PAYMENT" ADD CONSTRAINT "PAYMENT_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "BOOKING"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PAYMENT" ADD CONSTRAINT "PAYMENT_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "ORDER"("id") ON DELETE SET NULL ON UPDATE CASCADE;
