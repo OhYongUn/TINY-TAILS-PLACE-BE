@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AccessTokenPayloadDto } from './dto/accessTokenPayload.dto';
@@ -122,6 +127,9 @@ export class AuthService {
   }
 
   async logout(email: string): Promise<void> {
+    if (!email) {
+      throw new BadRequestException('Email is required for logout');
+    }
     await this.usersService.removeCurrentRefreshToken(email);
   }
 }

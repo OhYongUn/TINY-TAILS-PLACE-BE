@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -60,6 +62,11 @@ export class UsersService {
   }
 
   async removeCurrentRefreshToken(email: string): Promise<void> {
+    if (!email) {
+      throw new BadRequestException(
+        'Email is required to remove refresh token',
+      );
+    }
     await this.updateUser(email, {
       currentRefreshToken: null,
       currentRefreshTokenExp: null,
@@ -116,12 +123,23 @@ export class UsersService {
     email: string,
     data: Prisma.UserUpdateInput,
   ): Promise<void> {
+    if (!email) {
+      throw new BadRequestException('Email is required to update user');
+    }
     try {
-      await this.prismaService.user.update({
+      const updatedUser = await this.prismaService.user.update({
         where: { email },
         data,
       });
+      if (!updatedUser) {
+        throw new NotFoundException(`User with email ${email} not found`);
+      }
     } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(`User with email ${email} not found`);
+        }
+      }
       this.logger.error(`Failed to update user: ${email}`, error.stack);
       throw new InternalServerErrorException('Failed to update user');
     }

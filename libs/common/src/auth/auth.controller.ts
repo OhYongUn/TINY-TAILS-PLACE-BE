@@ -1,8 +1,11 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   HttpCode,
   HttpStatus,
+  InternalServerErrorException,
+  NotFoundException,
   Post,
   Req,
   UnauthorizedException,
@@ -91,14 +94,18 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(
-    @Body() logoutDto: { email: string },
-  ): Promise<ApiResponse<void>> {
+  async logout(@Body('email') email: string): Promise<ApiResponse<void>> {
+    if (!email) {
+      throw new BadRequestException('Email is required for logout');
+    }
     try {
-      await this.authService.logout(logoutDto.email);
+      await this.authService.logout(email);
       return { success: true };
     } catch (error) {
-      throw new UnauthorizedException('Logout failed');
+      if (error instanceof NotFoundException) {
+        throw new UnauthorizedException('User not found');
+      }
+      throw new InternalServerErrorException('Logout failed');
     }
   }
 }
