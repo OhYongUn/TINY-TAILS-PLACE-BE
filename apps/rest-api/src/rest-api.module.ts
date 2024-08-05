@@ -1,11 +1,23 @@
 import { Module } from '@nestjs/common';
 import { CommonModule } from '@app/common/common.module';
-import { UsersController } from './users/users.controller';
 import { UsersModule } from './users/users.module';
+import { BookingModule } from './booking/booking.module';
+import { RoomModule } from './room/room.module';
+import { ProductsModule } from './products/products.module';
+import { OrdersModule } from './orders/orders.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
-  imports: [CommonModule, UsersModule],
-  controllers: [UsersController],
+  imports: [
+    CommonModule,
+    UsersModule,
+    BookingModule,
+    RoomModule,
+    ProductsModule,
+    OrdersModule,
+    PaymentsModule,
+  ],
+  controllers: [],
   providers: [],
 })
 export class RestApiModule {}

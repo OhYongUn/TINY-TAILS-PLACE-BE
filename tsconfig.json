@@ -20,7 +20,10 @@
     "paths": {
       "@app/common/*": [
         "libs/common/src/*"
-      ]
+      ],
+      "@apps/rest/*": [
+        "apps/rest-api/src/*"
+      ],
     },
     "types": [
       "node"

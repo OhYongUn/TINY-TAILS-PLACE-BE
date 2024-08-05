@@ -8,12 +8,12 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import * as bcryptjs from 'bcryptjs';
-import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
-import { CreateUserDto } from '@app/common/users/dto/CreateUserDto';
 import { UserNotFoundException } from '@app/common/auth/authException/authExceptions';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { PrismaService } from '@app/common/prisma/prisma.service';
+import { CreateUserDto } from '@apps/rest/users/dto/CreateUserDto';
 
 @Injectable()
 export class UsersService {

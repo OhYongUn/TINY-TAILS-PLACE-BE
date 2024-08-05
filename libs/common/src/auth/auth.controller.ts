@@ -16,7 +16,6 @@ import { AuthService } from './auth.service';
 import { LocalGuard } from '@app/common/auth/guards/local.guard';
 import { Request } from 'express';
 import { User } from '@prisma/client';
-import { CreateUserDto } from '@app/common/users/dto/CreateUserDto';
 import { ApiResponse } from '@app/common/interface/ApiResponse';
 import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
 import { AuthExceptionFilter } from '@app/common/auth/authException/authExceptionFilter';
@@ -26,6 +25,7 @@ import {
   UserNotFoundException,
 } from '@app/common/auth/authException/authExceptions';
 import { RefreshTokenDto } from '@app/common/auth/dto/refreshToken.dto';
+import { CreateUserDto } from '@apps/rest/users/dto/CreateUserDto';
 
 interface RequestWithUser extends Request {
   user: User;

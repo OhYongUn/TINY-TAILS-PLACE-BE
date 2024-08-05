@@ -10,16 +10,16 @@ import { AccessTokenPayloadDto } from './dto/accessTokenPayload.dto';
 import { RefreshTokenPayloadDto } from './dto/refreshTokenPayload.dto';
 import { RefreshTokenDto } from './dto/refreshToken.dto';
 import { NewAccessTokenDto } from './dto/newAccessToken.dto';
-import { UsersService } from '@app/common/users/users.service';
 import { User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
-import { UserResponseDto } from '@app/common/users/dto/UserResponseDto';
-import { CreateUserDto } from '@app/common/users/dto/CreateUserDto';
 import {
   PasswordWrongException,
   UserNotFoundException,
 } from '@app/common/auth/authException/authExceptions';
+import { UsersService } from '@apps/rest/users/users.service';
+import { CreateUserDto } from '@apps/rest/users/dto/CreateUserDto';
+import { UserResponseDto } from '@apps/rest/users/dto/UserResponseDto';
 
 const DEFAULT_ACCESS_TOKEN_SECRET = 'default_access_token_secret';
 const DEFAULT_REFRESH_TOKEN_SECRET = 'default_refresh_token_secret';
