@@ -50,25 +50,26 @@ model Room {
 }
 
 model Booking {
-  id              Int      @id @default(autoincrement())
-  userId          Int
-  user            User     @relation(fields: [userId], references: [id])
-  roomId          Int
-  room            Room     @relation(fields: [roomId], references: [id])
-  checkInDate     DateTime
-  checkOutDate    DateTime
-  isLateCheckout  Boolean  @default(false)
-  isEarlyCheckin  Boolean  @default(false)
-  petCount        Int
-  basePrice       Float
-  lateCheckoutFee Float?
-  earlyCheckinFee Float?
-  totalPrice      Float
-  status          String // 예: 대기중, 확정, 취소
-  specialRequests String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  payment         Payment?
+  id                     Int      @id @default(autoincrement())
+  userId                 Int
+  user                   User     @relation(fields: [userId], references: [id])
+  roomId                 Int
+  room                   Room     @relation(fields: [roomId], references: [id])
+  checkInDate            DateTime
+  checkOutDate           DateTime
+  requestedLateCheckout  Boolean  @default(false)
+  requestedEarlyCheckin  Boolean  @default(false)
+  actualLateCheckout     Boolean  @default(false)
+  actualEarlyCheckin     Boolean  @default(false)
+  petCount               Int
+  basePrice              Float
+  additionalFees         Float    @default(0)
+  totalPrice             Float
+  status                 String
+  specialRequests        String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  payments               Payment[]
 
   @@map("BOOKING")
   @@index([roomId, checkInDate, checkOutDate])
@@ -134,6 +135,7 @@ model Payment {
   amount        Float
   status        String // 예: 대기중, 완료, 실패
   method        String // 예: 신용카드, 계좌이체, 페이팔
+  type          String   // 'INITIAL' or 'ADDITIONAL'
   bookingId     Int?     @unique
   booking       Booking? @relation(fields: [bookingId], references: [id])
   orderId       Int?     @unique
@@ -144,4 +146,5 @@ model Payment {
 
   @@map("PAYMENT")
   @@index([status, createdAt])
+  @@index([bookingId, type])
 }
