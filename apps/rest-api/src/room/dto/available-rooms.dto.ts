@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsInt, Min } from 'class-validator';
+import { IsDateString, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class AvailableRoomsDto {
   @ApiProperty({ example: '2023-08-01' })
@@ -11,7 +12,7 @@ export class AvailableRoomsDto {
   checkOutDate: string;
 
   @ApiProperty({ example: 2, description: '반려동물 수' })
-  @IsInt()
-  @Min(1)
-  petNum: number;
+  @IsString()
+  @Transform(({ value }) => parseInt(value, 10))
+  petNum: string;
 }
