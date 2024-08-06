@@ -1,3 +1,12 @@
+
+// 1.Prisma 마이그레이션 생성:
+// npx prisma migrate dev --name add_room_availability
+//2.마이그레이션 적용 및 Prisma 클라이언트 생성
+// npx prisma migrate deploy
+//3.Prisma 클라이언트 재생성:
+// npx prisma generate
+
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -24,94 +33,115 @@ model User {
 }
 
 model Room {
-  id          Int       @id @default(autoincrement())
-  name        String // 객실 이름
-  type        String // 객실 유형 (예: 스탠다드, 디럭스, 스위트)
-  description String // 객실 설명
-  capacity    Int // 수용 가능한 반려동물 수
-  price       Float // 1박 가격
-  size        Float // 객실 크기 (제곱미터)
-  imageUrls   String[] // 객실 이미지 URL 목록
-  available   Boolean   @default(true) // 예약 가능 여부
-  createdAt   DateTime  @default(now()) // 객실 정보 생성 시간
-  updatedAt   DateTime  @updatedAt // 객실 정보 최종 수정 시간
-  bookings    Booking[] // 이 객실의 예약 목록
+  id             Int                @id @default(autoincrement())
+  name           String
+  class          String // A, B, C 클래스
+  description    String
+  capacity       Int // 수용 가능한 반려동물 수
+  basePrice      Float // 기본 1박 가격
+  size           Float
+  imageUrls      String[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  bookings       Booking[]
+  availabilities RoomAvailability[]
 
   @@map("ROOM")
 }
 
 model Booking {
   id              Int      @id @default(autoincrement())
-  userId          Int // 예약한 사용자 ID
+  userId          Int
   user            User     @relation(fields: [userId], references: [id])
-  roomId          Int // 예약된 객실 ID
+  roomId          Int
   room            Room     @relation(fields: [roomId], references: [id])
-  startDate       DateTime // 체크인 날짜
-  endDate         DateTime // 체크아웃 날짜
-  petCount        Int // 예약한 반려동물 수
-  totalPrice      Float // 총 예약 금액
-  status          String // 예약 상태 (예: 대기중, 확정, 취소)
-  specialRequests String? // 특별 요청 사항 (선택적)
-  createdAt       DateTime @default(now()) // 예약 생성 시간
-  updatedAt       DateTime @updatedAt // 예약 정보 최종 수정 시간
-  payment         Payment? // 이 예약에 대한 결제 정보
+  checkInDate     DateTime
+  checkOutDate    DateTime
+  isLateCheckout  Boolean  @default(false)
+  isEarlyCheckin  Boolean  @default(false)
+  petCount        Int
+  basePrice       Float
+  lateCheckoutFee Float?
+  earlyCheckinFee Float?
+  totalPrice      Float
+  status          String // 예: 대기중, 확정, 취소
+  specialRequests String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  payment         Payment?
 
   @@map("BOOKING")
+  @@index([roomId, checkInDate, checkOutDate])
+  @@index([status, createdAt])
+  @@index([userId, status])
+}
+
+model RoomAvailability {
+  id             Int      @id @default(autoincrement())
+  roomId         Int
+  room           Room     @relation(fields: [roomId], references: [id])
+  date           DateTime // 날짜 (시간 정보 없이)
+  availableCount Int
+
+  @@unique([roomId, date])
+  @@index([date])
+  @@map("ROOM_AVAILABILITY")
 }
 
 model Product {
   id            Int         @id @default(autoincrement())
-  name          String // 상품 이름
-  description   String // 상품 설명
-  price         Float // 상품 가격
-  category      String // 상품 카테고리 (예: 장난감, 사료, 악세서리)
-  imageUrl      String // 상품 이미지 URL
-  stockQuantity Int // 재고 수량
-  createdAt     DateTime    @default(now()) // 상품 정보 생성 시간
-  updatedAt     DateTime    @updatedAt // 상품 정보 최종 수정 시간
-  orderItems    OrderItem[] // 이 상품의 주문 항목 목록
+  name          String
+  description   String
+  price         Float
+  category      String // 예: 장난감, 사료, 악세서리
+  imageUrl      String[]
+  stockQuantity Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  orderItems    OrderItem[]
 
   @@map("PRODUCT")
 }
 
 model Order {
   id          Int         @id @default(autoincrement())
-  userId      Int // 주문한 사용자 ID
+  userId      Int
   user        User        @relation(fields: [userId], references: [id])
-  totalAmount Float // 총 주문 금액
-  status      String // 주문 상태 (예: 대기중, 완료, 취소)
-  createdAt   DateTime    @default(now()) // 주문 생성 시간
-  updatedAt   DateTime    @updatedAt // 주문 정보 최종 수정 시간
-  orderItems  OrderItem[] // 이 주문에 포함된 상품 항목 목록
-  payment     Payment? // 이 주문에 대한 결제 정보
+  orderItems  OrderItem[]
+  totalAmount Float
+  status      String // 예: 대기중, 완료, 취소
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  payment     Payment?
 
   @@map("ORDER")
 }
 
 model OrderItem {
   id        Int     @id @default(autoincrement())
-  orderId   Int // 주문 ID
+  orderId   Int
   order     Order   @relation(fields: [orderId], references: [id])
-  productId Int // 상품 ID
+  productId Int
   product   Product @relation(fields: [productId], references: [id])
-  quantity  Int // 주문 수량
-  price     Float // 주문 당시 상품 가격
+  quantity  Int
+  price     Float
 
   @@map("ORDER_ITEM")
 }
 
 model Payment {
   id            Int      @id @default(autoincrement())
-  amount        Float // 결제 금액
-  status        String // 결제 상태 (예: 대기중, 완료, 실패)
-  method        String // 결제 방법 (예: 신용카드, 계좌이체, 페이팔)
-  bookingId     Int?     @unique // 예약 결제인 경우의 예약 ID (선택적)
+  amount        Float
+  status        String // 예: 대기중, 완료, 실패
+  method        String // 예: 신용카드, 계좌이체, 페이팔
+  bookingId     Int?     @unique
   booking       Booking? @relation(fields: [bookingId], references: [id])
-  orderId       Int?     @unique // 상품 주문 결제인 경우의 주문 ID (선택적)
+  orderId       Int?     @unique
   order         Order?   @relation(fields: [orderId], references: [id])
-  transactionId String? // 외부 결제 시스템의 거래 ID (선택적)
-  createdAt     DateTime @default(now()) // 결제 정보 생성 시간
-  updatedAt     DateTime @updatedAt // 결제 정보 최종 수정 시간
+  transactionId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@map("PAYMENT")
+  @@index([status, createdAt])
 }
