@@ -30,7 +30,15 @@ export class RoomService {
           },
         },
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        class: true,
+        description: true,
+        capacity: true,
+        basePrice: true,
+        size: true,
+        imageUrls: true,
         availabilities: {
           where: {
             date: {
@@ -40,14 +48,23 @@ export class RoomService {
           },
           select: {
             date: true,
+            availableCount: true,
           },
         },
       },
     });
 
     return availableRooms.map((room) => ({
-      ...room,
+      id: room.id,
+      name: room.name,
+      class: room.class,
+      description: room.description,
+      capacity: room.capacity,
+      basePrice: room.basePrice,
+      size: room.size,
+      imageUrls: room.imageUrls,
       availableDates: room.availabilities.map((a) => a.date),
+      availableCounts: room.availabilities.map((a) => a.availableCount),
     }));
   }
 }

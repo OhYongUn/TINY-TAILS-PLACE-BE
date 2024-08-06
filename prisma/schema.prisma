@@ -1,11 +1,9 @@
-
 // 1.Prisma 마이그레이션 생성:
 // npx prisma migrate dev --name add_room_availability
-//2.마이그레이션 적용 및 Prisma 클라이언트 생성
+// 2.마이그레이션 적용 및 Prisma 클라이언트 생성
 // npx prisma migrate deploy
-//3.Prisma 클라이언트 재생성:
+// 3.Prisma 클라이언트 재생성:
 // npx prisma generate
-
 
 datasource db {
   provider  = "postgresql"
@@ -50,31 +48,32 @@ model Room {
 }
 
 model Booking {
-  id                     Int      @id @default(autoincrement())
-  userId                 Int
-  user                   User     @relation(fields: [userId], references: [id])
-  roomId                 Int
-  room                   Room     @relation(fields: [roomId], references: [id])
-  checkInDate            DateTime
-  checkOutDate           DateTime
-  requestedLateCheckout  Boolean  @default(false)
-  requestedEarlyCheckin  Boolean  @default(false)
-  actualLateCheckout     Boolean  @default(false)
-  actualEarlyCheckin     Boolean  @default(false)
-  petCount               Int
-  basePrice              Float
-  additionalFees         Float    @default(0)
-  totalPrice             Float
-  status                 String
-  specialRequests        String?
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-  payments               Payment[]
+  id                    Int       @id @default(autoincrement())
+  userId                Int
+  user                  User      @relation(fields: [userId], references: [id])
+  roomId                Int
+  room                  Room      @relation(fields: [roomId], references: [id])
+  checkInDate           DateTime
+  checkOutDate          DateTime
+  requestedLateCheckout Boolean   @default(false)
+  requestedEarlyCheckin Boolean   @default(false)
+  actualLateCheckout    Boolean   @default(false)
+  actualEarlyCheckin    Boolean   @default(false)
+  petCount              Int
+  basePrice             Float
+  additionalFees        Float     @default(0)
+  totalPrice            Float
+  status                String
+  specialRequests       String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  payments              Payment[]
 
-  @@map("BOOKING")
+  @@index([checkInDate, checkOutDate])
   @@index([roomId, checkInDate, checkOutDate])
   @@index([status, createdAt])
   @@index([userId, status])
+  @@map("BOOKING")
 }
 
 model RoomAvailability {
@@ -135,7 +134,7 @@ model Payment {
   amount        Float
   status        String // 예: 대기중, 완료, 실패
   method        String // 예: 신용카드, 계좌이체, 페이팔
-  type          String   // 'INITIAL' or 'ADDITIONAL'
+  type          String // 'INITIAL' or 'ADDITIONAL'
   bookingId     Int?     @unique
   booking       Booking? @relation(fields: [bookingId], references: [id])
   orderId       Int?     @unique
@@ -144,7 +143,7 @@ model Payment {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  @@map("PAYMENT")
   @@index([status, createdAt])
   @@index([bookingId, type])
+  @@map("PAYMENT")
 }

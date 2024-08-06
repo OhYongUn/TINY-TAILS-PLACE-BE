@@ -27,4 +27,7 @@ export class RoomDto {
 
   @ApiProperty({ type: [Date] })
   availableDates: Date[];
+
+  @ApiProperty({ type: [Number] })
+  availableCounts: number[];
 }
