@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthException } from './authException';
+import { ApiError } from '@app/common/interface/ApiResponse';
 
 @Catch(AuthException, HttpException)
 export class AuthExceptionFilter implements ExceptionFilter {
@@ -33,11 +34,16 @@ export class AuthExceptionFilter implements ExceptionFilter {
       message = exception.message;
     }
 
-    res.status(statusCode).json({
-      statusCode,
-      timestamp: new Date().toISOString(),
-      message,
-      path: req.url,
-    });
+    const errorResponse: ApiError = {
+      success: false,
+      error: {
+        statusCode,
+        message,
+        timestamp: new Date().toISOString(),
+        path: req.url,
+      },
+    };
+
+    res.status(statusCode).json(errorResponse);
   }
 }
