@@ -5,7 +5,7 @@ import { BookingModule } from './booking/booking.module';
 import { RoomModule } from './room/room.module';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
-import { PaymentsModule } from './payments/payments.module';
+import { PaymentModule } from '@apps/rest/payment/payment.module';
 
 @Module({
   imports: [
@@ -15,7 +15,7 @@ import { PaymentsModule } from './payments/payments.module';
     RoomModule,
     ProductsModule,
     OrdersModule,
-    PaymentsModule,
+    PaymentModule,
   ],
   controllers: [],
   providers: [],

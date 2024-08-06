@@ -1,7 +1,7 @@
 // booking.service.ts
 import {
-  Injectable,
   BadRequestException,
+  Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -39,6 +39,9 @@ export class BookingService {
 
       // 기본 가격 계산
       const room = await prisma.room.findUnique({ where: { id: roomId } });
+      if (!room || typeof room.basePrice !== 'number') {
+        throw new NotFoundException('Room not found or has invalid base price');
+      }
       const nights = Math.ceil(
         (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24),
       );
@@ -72,28 +75,6 @@ export class BookingService {
 
       return { booking, amountToPay: basePrice };
     });
-  }
-
-  private async checkRoomAvailability(
-    roomId: number,
-    checkInDate: Date,
-    checkOutDate: Date,
-  ): Promise<boolean> {
-    const availabilities = await this.prisma.roomAvailability.findMany({
-      where: {
-        roomId,
-        date: {
-          gte: checkInDate,
-          lt: checkOutDate,
-        },
-        availableCount: { gt: 0 },
-      },
-    });
-
-    const requiredDays = Math.ceil(
-      (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24),
-    );
-    return availabilities.length === requiredDays;
   }
 
   async cancelBooking(cancelBookingDto: CancelBookingDto) {
@@ -165,6 +146,28 @@ export class BookingService {
     });
   }
 
+  private async checkRoomAvailability(
+    roomId: number,
+    checkInDate: Date,
+    checkOutDate: Date,
+  ): Promise<boolean> {
+    const availabilities = await this.prisma.roomAvailability.findMany({
+      where: {
+        roomId,
+        date: {
+          gte: checkInDate,
+          lt: checkOutDate,
+        },
+        availableCount: { gt: 0 },
+      },
+    });
+
+    const requiredDays = Math.ceil(
+      (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return availabilities.length === requiredDays;
+  }
+
   private async calculateCancellationFee(booking: any): Promise<number> {
     const now = new Date();
     const checkInDate = new Date(booking.checkInDate);
@@ -208,7 +211,7 @@ export class BookingService {
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {
     const dates = [];
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
     while (currentDate < endDate) {
       dates.push(new Date(currentDate));
       currentDate.setDate(currentDate.getDate() + 1);
