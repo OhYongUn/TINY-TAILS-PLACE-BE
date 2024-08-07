@@ -8,8 +8,8 @@ import {
 } from '@apps/rest/room/exceptions/room-exceptions';
 import { RoomErrorCodes } from '@apps/rest/room/exceptions/error-codes';
 import { AvailableRoomClassDto } from '@apps/rest/room/dto/available-room-class.dto';
-import { CreateRoomDetailDto } from '@apps/rest/room/dto/create-room-detail.dto';
 import { UpdateRoomDto } from '@apps/rest/room/dto/update-room.dto';
+import { CreateRoomDto } from '@apps/rest/room/dto/create-room.dto';
 
 @Injectable()
 export class RoomService {
@@ -98,14 +98,14 @@ export class RoomService {
     }
   }
 
-  create(createRoomDetailDto: CreateRoomDetailDto) {
-    return this.prisma.roomDetail.create({
-      data: createRoomDetailDto,
+  create(createRoomDto: CreateRoomDto) {
+    return this.prisma.room.create({
+      data: createRoomDto,
     });
   }
 
   findAll() {
-    return this.prisma.roomDetail.findMany();
+    return this.prisma.room.findMany();
   }
 
   findOne(id: number) {
@@ -116,7 +116,7 @@ export class RoomService {
   }
 
   update(id: number, UpdateRoomDto: UpdateRoomDto) {
-    return this.prisma.roomDetail.update({
+    return this.prisma.room.update({
       where: { id },
       data: UpdateRoomDto,
     });
