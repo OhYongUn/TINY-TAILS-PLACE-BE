@@ -1,12 +1,14 @@
 // room.controller.ts
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseFilters } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RoomService } from './room.service';
 import { AvailableRoomsDto } from './dto/available-rooms.dto';
 import { RoomDto } from './dto/room.dto';
+import { RoomExceptionFilter } from '@apps/rest/room/exceptions/room-exception.filter';
 
 @ApiTags('rooms')
 @Controller('rooms')
+@UseFilters(RoomExceptionFilter)
 export class RoomController {
   constructor(private readonly roomService: RoomService) {}
 

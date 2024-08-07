@@ -2,6 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { AvailableRoomsDto } from './dto/available-rooms.dto';
 import { RoomDto } from './dto/room.dto';
 import { PrismaService } from '@app/common/prisma/prisma.service';
+import {
+  InvalidDateRangeException,
+  RoomException,
+  RoomNotAvailableException,
+  RoomNotFoundException,
+} from '@apps/rest/room/exceptions/room-exceptions';
+import { RoomErrorCodes } from '@apps/rest/room/exceptions/error-codes';
 
 @Injectable()
 export class RoomService {
@@ -14,9 +21,10 @@ export class RoomService {
     const dayCount = Math.ceil(
       (checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24),
     );
-    console.log('checkIn', checkIn);
-    console.log('checkOut', checkOut);
-    console.log('dayCount', dayCount);
+
+    if (checkIn >= checkOut) {
+      throw new InvalidDateRangeException(RoomErrorCodes.INVALID_DATE_RANGE);
+    }
 
     try {
       const availableRooms = await this.prisma.room.findMany({
@@ -59,7 +67,12 @@ export class RoomService {
           },
         },
       });
-
+      if (availableRooms.length === 0) {
+        throw new RoomNotAvailableException(
+          RoomErrorCodes.ROOM_NOT_AVAILABLE,
+          '해당 날짜에 이용 가능한 객실이 없습니다',
+        );
+      }
       console.log('Query result:', availableRooms);
 
       const filteredRooms = availableRooms.filter(
@@ -67,8 +80,10 @@ export class RoomService {
       );
 
       if (filteredRooms.length === 0) {
-        console.log('No available rooms found');
-        return [];
+        throw new RoomNotAvailableException(
+          RoomErrorCodes.ROOM_NOT_AVAILABLE,
+          '전체 숙박 기간 동안 완전히 이용 가능한 객실이 없습니다',
+        );
       }
 
       return filteredRooms.map(
@@ -86,8 +101,13 @@ export class RoomService {
         }),
       );
     } catch (error) {
-      console.error('Error in findAvailableRooms:', error);
-      throw error;
+      if (error instanceof RoomException) {
+        throw error;
+      }
+      throw new RoomNotFoundException(
+        RoomErrorCodes.ROOM_NOT_FOUND,
+        '이용 가능한 객실을 찾는 중 오류가 발생했습니다',
+      );
     }
   }
 }
