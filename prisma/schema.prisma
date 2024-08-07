@@ -50,6 +50,7 @@ model Room {
 
 model Booking {
   id                    Int       @id @default(autoincrement()) @map("id")
+  bookingNum            String    @unique @default(uuid()) @map("booking_num")
   userId                Int       @map("user_id")
   user                  User      @relation(fields: [userId], references: [id])
   roomId                Int       @map("room_id")
