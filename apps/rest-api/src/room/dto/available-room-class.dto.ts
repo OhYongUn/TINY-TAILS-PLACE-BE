@@ -1,21 +1,14 @@
-// room.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 
-export class RoomDto {
+export class AvailableRoomClassDto {
   @ApiProperty()
-  id: number;
+  class: string;
 
   @ApiProperty()
   name: string;
 
   @ApiProperty()
-  class: string;
-
-  @ApiProperty()
   description: string;
-
-  @ApiProperty()
-  capacity: number;
 
   @ApiProperty()
   basePrice: number;
@@ -27,8 +20,8 @@ export class RoomDto {
   imageUrls: string[];
 
   @ApiProperty()
-  createdAt: Date;
+  availableRooms: number;
 
-  @ApiProperty()
-  updatedAt: Date;
+  @ApiProperty({ type: [Date] })
+  availableDates: Date[];
 }
