@@ -1,9 +1,12 @@
-// 1.Prisma 마이그레이션 생성:
-// npx prisma migrate dev --name tet2
-// 2.마이그레이션 적용 및 Prisma 클라이언트 생성
+// 1. Prisma 마이그레이션 생성 및 적용, Prisma 클라이언트 생성:
+// npx prisma migrate dev --name update_pet_hotel_schema
+//
+// 2. (선택적) 프로덕션 환경에서 마이그레이션 적용:
 // npx prisma migrate deploy
-// 3.Prisma 클라이언트 재생성:
+//
+// 3. (선택적) Prisma 클라이언트 재생성:
 // npx prisma generate
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -31,64 +34,125 @@ model User {
 }
 
 model Room {
-  id             Int                @id @default(autoincrement()) @map("id")
-  name           String             @map("name")
-  class          String             @map("class")
-  description    String             @map("description")
-  capacity       Int                @map("capacity")
-  basePrice      Float              @map("base_price")
-  size           Float              @map("size")
-  imageUrls      String[]           @map("image_urls")
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
-  bookings       Booking[]
-  availabilities RoomAvailability[]
+  id          Int          @id @default(autoincrement()) @map("id")
+  name        String       @map("name")
+  class       String       @map("class")
+  description String       @map("description")
+  capacity    Int          @map("capacity")
+  size        Float        @map("size")
+  imageUrls   String[]     @map("image_urls")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  prices      RoomPrice[]
+  roomDetails RoomDetail[]
 
-  @@index([class])
   @@map("ROOMS")
 }
 
+model RoomDetail {
+  id              Int                @id @default(autoincrement()) @map("id")
+  roomId          Int                @map("room_id")
+  room            Room               @relation(fields: [roomId], references: [id])
+  roomNumber      String             @unique @map("room_number")
+  currentCheckIn  DateTime?          @map("current_check_in")
+  currentCheckOut DateTime?          @map("current_check_out")
+  status          RoomStatus         @map("status")
+  lastCleaned     DateTime?          @map("last_cleaned")
+  nextCleaning    DateTime?          @map("next_cleaning")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  bookings        Booking[]
+  cleaningLogs    CleaningLog[]
+  maintenanceLogs MaintenanceLog[]
+  availabilities  RoomAvailability[]
+
+  @@index([roomId])
+  @@index([status])
+  @@map("ROOM_DETAILS")
+}
+
+model RoomAvailability {
+  id             Int        @id @default(autoincrement()) @map("id")
+  roomDetailId   Int        @map("room_detail_id")
+  roomDetail     RoomDetail @relation(fields: [roomDetailId], references: [id])
+  date           DateTime   @map("date")
+  availableCount Int        @map("available_count")
+
+  @@unique([roomDetailId, date])
+  @@index([date])
+  @@map("ROOM_AVAILABILITIES")
+}
+
+model RoomPrice {
+  id        Int       @id @default(autoincrement()) @map("id")
+  roomId    Int       @map("room_id")
+  room      Room      @relation(fields: [roomId], references: [id])
+  startDate DateTime  @map("start_date")
+  endDate   DateTime  @map("end_date")
+  price     Float     @map("price")
+  type      PriceType @map("type")
+
+  @@index([roomId])
+  @@index([startDate, endDate])
+  @@map("ROOM_PRICES")
+}
+
 model Booking {
-  id                    Int       @id @default(autoincrement()) @map("id")
-  bookingNum            String    @unique @default(uuid()) @map("booking_num")
-  userId                Int       @map("user_id")
-  user                  User      @relation(fields: [userId], references: [id])
-  roomId                Int       @map("room_id")
-  room                  Room      @relation(fields: [roomId], references: [id])
-  checkInDate           DateTime  @map("check_in_date")
-  checkOutDate          DateTime  @map("check_out_date")
-  requestedLateCheckout Boolean   @default(false) @map("requested_late_checkout")
-  requestedEarlyCheckin Boolean   @default(false) @map("requested_early_checkin")
-  actualLateCheckout    Boolean   @default(false) @map("actual_late_checkout")
-  actualEarlyCheckin    Boolean   @default(false) @map("actual_early_checkin")
-  petCount              Int       @map("pet_count")
-  basePrice             Float     @map("base_price")
-  additionalFees        Float     @default(0) @map("additional_fees")
-  totalPrice            Float     @map("total_price")
-  status                String    @map("status")
-  specialRequests       String?   @map("special_requests")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  id                    Int           @id @default(autoincrement()) @map("id")
+  bookingNum            String        @unique @default(uuid()) @map("booking_num")
+  userId                Int           @map("user_id")
+  user                  User          @relation(fields: [userId], references: [id])
+  roomDetailId          Int           @map("room_detail_id")
+  roomDetail            RoomDetail    @relation(fields: [roomDetailId], references: [id])
+  checkInDate           DateTime      @map("check_in_date")
+  checkOutDate          DateTime      @map("check_out_date")
+  requestedLateCheckout Boolean       @default(false) @map("requested_late_checkout")
+  requestedEarlyCheckin Boolean       @default(false) @map("requested_early_checkin")
+  actualLateCheckout    Boolean       @default(false) @map("actual_late_checkout")
+  actualEarlyCheckin    Boolean       @default(false) @map("actual_early_checkin")
+  petCount              Int           @map("pet_count")
+  basePrice             Float         @map("base_price")
+  additionalFees        Float         @default(0) @map("additional_fees")
+  totalPrice            Float         @map("total_price")
+  status                BookingStatus @map("status")
+  specialRequests       String?       @map("special_requests")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
   payments              Payment[]
 
   @@index([userId])
-  @@index([roomId])
+  @@index([roomDetailId])
   @@index([checkInDate, checkOutDate])
   @@index([status])
   @@map("BOOKINGS")
 }
 
-model RoomAvailability {
-  id             Int      @id @default(autoincrement()) @map("id")
-  roomId         Int      @map("room_id")
-  room           Room     @relation(fields: [roomId], references: [id])
-  date           DateTime @map("date")
-  availableCount Int      @map("available_count")
+model CleaningLog {
+  id           Int        @id @default(autoincrement()) @map("id")
+  roomDetailId Int        @map("room_detail_id")
+  roomDetail   RoomDetail @relation(fields: [roomDetailId], references: [id])
+  cleanedAt    DateTime   @map("cleaned_at")
+  cleanedBy    String     @map("cleaned_by")
+  notes        String?    @map("notes")
 
-  @@unique([roomId, date])
-  @@index([roomId])
-  @@index([date])
-  @@map("ROOM_AVAILABILITIES")
+  @@index([roomDetailId])
+  @@index([cleanedAt])
+  @@map("CLEANING_LOGS")
+}
+
+model MaintenanceLog {
+  id           Int        @id @default(autoincrement()) @map("id")
+  roomDetailId Int        @map("room_detail_id")
+  roomDetail   RoomDetail @relation(fields: [roomDetailId], references: [id])
+  issue        String     @map("issue")
+  reportedAt   DateTime   @map("reported_at")
+  resolvedAt   DateTime?  @map("resolved_at")
+  status       String     @map("status")
+  notes        String?    @map("notes")
+
+  @@index([roomDetailId])
+  @@index([status])
+  @@map("MAINTENANCE_LOGS")
 }
 
 model Product {
@@ -156,4 +220,27 @@ model Payment {
   @@index([method])
   @@index([type])
   @@map("PAYMENTS")
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  CLEANING
+}
+
+enum PriceType {
+  BASE
+  SEASONAL
+  WEEKEND
+  HOLIDAY
+  SPECIAL_EVENT
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
 }
