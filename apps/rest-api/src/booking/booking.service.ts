@@ -1,4 +1,3 @@
-// booking.service.ts
 import {
   BadRequestException,
   Injectable,
@@ -22,6 +21,7 @@ export class BookingService {
       requestedEarlyCheckin,
       petCount,
       specialRequests,
+      paymentMethod, // 새로 추가된 필드
     } = createBookingDto;
 
     return this.prisma.$transaction(async (prisma) => {
@@ -47,7 +47,7 @@ export class BookingService {
       );
       const basePrice = room.basePrice * nights;
 
-      // Booking 임시 생성
+      // Booking 생성
       const booking = await prisma.booking.create({
         data: {
           userId,
@@ -61,6 +61,17 @@ export class BookingService {
           totalPrice: basePrice,
           status: 'PENDING',
           specialRequests,
+          // bookingNum은 자동 생성됨 (@default(uuid()) 설정에 의해)
+        },
+      });
+
+      // Payment 생성
+      const payment = await prisma.payment.create({
+        data: {
+          bookingId: booking.id,
+          amount: basePrice,
+          status: 'PENDING',
+          method: paymentMethod,
         },
       });
 
@@ -73,7 +84,7 @@ export class BookingService {
         -1,
       );
 
-      return { booking, amountToPay: basePrice };
+      return { booking, payment };
     });
   }
 
@@ -217,5 +228,82 @@ export class BookingService {
       currentDate.setDate(currentDate.getDate() + 1);
     }
     return dates;
+  }
+
+  async createBookingAndInitiatePayment(createBookingDto: CreateBookingDto) {
+    const {
+      userId,
+      roomId,
+      checkInDate,
+      checkOutDate,
+      requestedLateCheckout,
+      requestedEarlyCheckin,
+      petCount,
+      specialRequests,
+      paymentMethod,
+    } = createBookingDto;
+
+    return this.prisma.$transaction(async (prisma) => {
+      // 방 가용성 확인
+      const isAvailable = await this.checkRoomAvailability(
+        roomId,
+        checkInDate,
+        checkOutDate,
+      );
+      if (!isAvailable) {
+        throw new BadRequestException(
+          'Room is not available for the selected dates',
+        );
+      }
+
+      // 기본 가격 계산
+      const room = await prisma.room.findUnique({ where: { id: roomId } });
+      if (!room || typeof room.basePrice !== 'number') {
+        throw new NotFoundException('Room not found or has invalid base price');
+      }
+      const nights = Math.ceil(
+        (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24),
+      );
+      const basePrice = room.basePrice * nights;
+
+      // Booking 생성
+      const booking = await prisma.booking.create({
+        data: {
+          userId,
+          roomId,
+          checkInDate,
+          checkOutDate,
+          requestedLateCheckout,
+          requestedEarlyCheckin,
+          petCount,
+          basePrice,
+          totalPrice: basePrice,
+          status: 'PENDING',
+          specialRequests,
+        },
+      });
+
+      // Payment 생성
+      const payment = await prisma.payment.create({
+        data: {
+          amount: basePrice,
+          status: 'PENDING',
+          method: paymentMethod,
+          type: 'INITIAL',
+          bookingId: booking.id,
+        },
+      });
+
+      // RoomAvailability 업데이트
+      await this.updateRoomAvailability(
+        prisma,
+        roomId,
+        checkInDate,
+        checkOutDate,
+        -1,
+      );
+
+      return { booking, payment, amountToPay: basePrice };
+    });
   }
 }

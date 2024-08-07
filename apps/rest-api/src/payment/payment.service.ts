@@ -100,4 +100,80 @@ export class PaymentService {
     }
     return dates;
   }
+  async createBookingAndInitiatePayment(createBookingDto: CreateBookingDto) {
+    const {
+      userId,
+      roomId,
+      checkInDate,
+      checkOutDate,
+      requestedLateCheckout,
+      requestedEarlyCheckin,
+      petCount,
+      specialRequests,
+      paymentMethod,
+    } = createBookingDto;
+
+    return this.prisma.$transaction(async (prisma) => {
+      // 방 가용성 확인
+      const isAvailable = await this.checkRoomAvailability(
+        roomId,
+        checkInDate,
+        checkOutDate,
+      );
+      if (!isAvailable) {
+        throw new BadRequestException(
+          'Room is not available for the selected dates',
+        );
+      }
+
+      // 기본 가격 계산
+      const room = await prisma.room.findUnique({ where: { id: roomId } });
+      if (!room || typeof room.basePrice !== 'number') {
+        throw new NotFoundException('Room not found or has invalid base price');
+      }
+      const nights = Math.ceil(
+        (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24),
+      );
+      const basePrice = room.basePrice * nights;
+
+      // Booking 생성
+      const booking = await prisma.booking.create({
+        data: {
+          userId,
+          roomId,
+          checkInDate,
+          checkOutDate,
+          requestedLateCheckout,
+          requestedEarlyCheckin,
+          petCount,
+          basePrice,
+          totalPrice: basePrice,
+          status: 'PENDING',
+          specialRequests,
+        },
+      });
+
+      // Payment 생성
+      const payment = await prisma.payment.create({
+        data: {
+          amount: basePrice,
+          status: 'PENDING',
+          method: paymentMethod,
+          type: 'INITIAL',
+          bookingId: booking.id,
+        },
+      });
+
+      // RoomAvailability 업데이트
+      await this.updateRoomAvailability(
+        prisma,
+        roomId,
+        checkInDate,
+        checkOutDate,
+        -1,
+      );
+
+      return { booking, payment, amountToPay: basePrice };
+    });
+  }
 }
