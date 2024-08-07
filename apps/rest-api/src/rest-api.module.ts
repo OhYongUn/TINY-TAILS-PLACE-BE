@@ -6,6 +6,7 @@ import { RoomModule } from './room/room.module';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentModule } from '@apps/rest/payment/payment.module';
+import { RoomDetailModule } from './room-detail/room-detail.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PaymentModule } from '@apps/rest/payment/payment.module';
     ProductsModule,
     OrdersModule,
     PaymentModule,
+    RoomDetailModule,
   ],
   controllers: [],
   providers: [],
