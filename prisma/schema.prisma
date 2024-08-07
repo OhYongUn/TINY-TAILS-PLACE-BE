@@ -1,10 +1,9 @@
 // 1.Prisma 마이그레이션 생성:
-// npx prisma migrate dev --name add_room_availability
+// npx prisma migrate dev --name tet2
 // 2.마이그레이션 적용 및 Prisma 클라이언트 생성
 // npx prisma migrate deploy
 // 3.Prisma 클라이언트 재생성:
 // npx prisma generate
-
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -16,134 +15,144 @@ generator client {
 }
 
 model User {
-  id                     Int       @id @default(autoincrement())
-  name                   String // 사용자 이름
-  email                  String    @unique // 사용자 이메일 (고유값)
-  password               String // 암호화된 비밀번호
-  createdAt              DateTime  @default(now()) @map("created_at") // 계정 생성 시간
-  updatedAt              DateTime  @updatedAt @map("updated_at") // 계정 정보 최종 수정 시간
-  currentRefreshToken    String? // 현재 리프레시 토큰 (선택적)
-  currentRefreshTokenExp DateTime? // 현재 리프레시 토큰 만료 시간 (선택적)
-  bookings               Booking[] // 사용자의 예약 목록
-  orders                 Order[] // 사용자의 주문 목록
+  id                     Int       @id @default(autoincrement()) @map("id")
+  name                   String    @map("name")
+  email                  String    @unique @map("email")
+  password               String    @map("password")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  currentRefreshToken    String?   @map("current_refresh_token")
+  currentRefreshTokenExp DateTime? @map("current_refresh_token_exp")
+  bookings               Booking[]
+  orders                 Order[]
 
-  @@map("USER")
+  @@index([email])
+  @@map("USERS")
 }
 
 model Room {
-  id             Int                @id @default(autoincrement())
-  name           String
-  class          String // A, B, C 클래스
-  description    String
-  capacity       Int // 수용 가능한 반려동물 수
-  basePrice      Float // 기본 1박 가격
-  size           Float
-  imageUrls      String[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id             Int                @id @default(autoincrement()) @map("id")
+  name           String             @map("name")
+  class          String             @map("class")
+  description    String             @map("description")
+  capacity       Int                @map("capacity")
+  basePrice      Float              @map("base_price")
+  size           Float              @map("size")
+  imageUrls      String[]           @map("image_urls")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
   bookings       Booking[]
   availabilities RoomAvailability[]
 
-  @@map("ROOM")
+  @@index([class])
+  @@map("ROOMS")
 }
 
 model Booking {
-  id                    Int       @id @default(autoincrement())
-  userId                Int
+  id                    Int       @id @default(autoincrement()) @map("id")
+  userId                Int       @map("user_id")
   user                  User      @relation(fields: [userId], references: [id])
-  roomId                Int
+  roomId                Int       @map("room_id")
   room                  Room      @relation(fields: [roomId], references: [id])
-  checkInDate           DateTime
-  checkOutDate          DateTime
-  requestedLateCheckout Boolean   @default(false)
-  requestedEarlyCheckin Boolean   @default(false)
-  actualLateCheckout    Boolean   @default(false)
-  actualEarlyCheckin    Boolean   @default(false)
-  petCount              Int
-  basePrice             Float
-  additionalFees        Float     @default(0)
-  totalPrice            Float
-  status                String
-  specialRequests       String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  checkInDate           DateTime  @map("check_in_date")
+  checkOutDate          DateTime  @map("check_out_date")
+  requestedLateCheckout Boolean   @default(false) @map("requested_late_checkout")
+  requestedEarlyCheckin Boolean   @default(false) @map("requested_early_checkin")
+  actualLateCheckout    Boolean   @default(false) @map("actual_late_checkout")
+  actualEarlyCheckin    Boolean   @default(false) @map("actual_early_checkin")
+  petCount              Int       @map("pet_count")
+  basePrice             Float     @map("base_price")
+  additionalFees        Float     @default(0) @map("additional_fees")
+  totalPrice            Float     @map("total_price")
+  status                String    @map("status")
+  specialRequests       String?   @map("special_requests")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
   payments              Payment[]
 
+  @@index([userId])
+  @@index([roomId])
   @@index([checkInDate, checkOutDate])
-  @@index([roomId, checkInDate, checkOutDate])
-  @@index([status, createdAt])
-  @@index([userId, status])
-  @@map("BOOKING")
+  @@index([status])
+  @@map("BOOKINGS")
 }
 
 model RoomAvailability {
-  id             Int      @id @default(autoincrement())
-  roomId         Int
+  id             Int      @id @default(autoincrement()) @map("id")
+  roomId         Int      @map("room_id")
   room           Room     @relation(fields: [roomId], references: [id])
-  date           DateTime // 날짜 (시간 정보 없이)
-  availableCount Int
+  date           DateTime @map("date")
+  availableCount Int      @map("available_count")
 
   @@unique([roomId, date])
+  @@index([roomId])
   @@index([date])
-  @@map("ROOM_AVAILABILITY")
+  @@map("ROOM_AVAILABILITIES")
 }
 
 model Product {
-  id            Int         @id @default(autoincrement())
-  name          String
-  description   String
-  price         Float
-  category      String // 예: 장난감, 사료, 악세서리
-  imageUrl      String[]
-  stockQuantity Int
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id            Int         @id @default(autoincrement()) @map("id")
+  name          String      @map("name")
+  description   String      @map("description")
+  price         Float       @map("price")
+  category      String      @map("category")
+  imageUrl      String[]    @map("image_urls")
+  stockQuantity Int         @map("stock_quantity")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
   orderItems    OrderItem[]
 
-  @@map("PRODUCT")
+  @@index([category])
+  @@index([price])
+  @@map("PRODUCTS")
 }
 
 model Order {
-  id          Int         @id @default(autoincrement())
-  userId      Int
+  id          Int         @id @default(autoincrement()) @map("id")
+  userId      Int         @map("user_id")
   user        User        @relation(fields: [userId], references: [id])
   orderItems  OrderItem[]
-  totalAmount Float
-  status      String // 예: 대기중, 완료, 취소
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  totalAmount Float       @map("total_amount")
+  status      String      @map("status")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
   payment     Payment?
 
-  @@map("ORDER")
+  @@index([userId])
+  @@index([status])
+  @@map("ORDERS")
 }
 
 model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
+  id        Int     @id @default(autoincrement()) @map("id")
+  orderId   Int     @map("order_id")
   order     Order   @relation(fields: [orderId], references: [id])
-  productId Int
+  productId Int     @map("product_id")
   product   Product @relation(fields: [productId], references: [id])
-  quantity  Int
-  price     Float
+  quantity  Int     @map("quantity")
+  price     Float   @map("price")
 
-  @@map("ORDER_ITEM")
+  @@index([orderId])
+  @@index([productId])
+  @@map("ORDER_ITEMS")
 }
 
 model Payment {
-  id            Int      @id @default(autoincrement())
-  amount        Float
-  status        String // 예: 대기중, 완료, 실패
-  method        String // 예: 신용카드, 계좌이체, 페이팔
-  type          String // 'INITIAL' or 'ADDITIONAL'
-  bookingId     Int?     @unique
+  id            Int      @id @default(autoincrement()) @map("id")
+  amount        Float    @map("amount")
+  status        String   @map("status")
+  method        String   @map("method")
+  type          String   @map("type")
+  bookingId     Int?     @unique @map("booking_id")
   booking       Booking? @relation(fields: [bookingId], references: [id])
-  orderId       Int?     @unique
+  orderId       Int?     @unique @map("order_id")
   order         Order?   @relation(fields: [orderId], references: [id])
-  transactionId String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  transactionId String?  @map("transaction_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  @@index([status, createdAt])
-  @@index([bookingId, type])
-  @@map("PAYMENT")
+  @@index([status])
+  @@index([method])
+  @@index([type])
+  @@map("PAYMENTS")
 }
