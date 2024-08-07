@@ -1,17 +1,28 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+class AvailableRoomDetailDto {
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty()
+  roomNumber: string;
+}
+
 export class AvailableRoomClassDto {
   @ApiProperty()
-  class: string;
+  id: number;
 
   @ApiProperty()
   name: string;
 
   @ApiProperty()
+  class: string;
+
+  @ApiProperty()
   description: string;
 
   @ApiProperty()
-  basePrice: number;
+  capacity: number;
 
   @ApiProperty()
   size: number;
@@ -20,8 +31,8 @@ export class AvailableRoomClassDto {
   imageUrls: string[];
 
   @ApiProperty()
-  availableRooms: number;
+  availableCount: number;
 
-  @ApiProperty({ type: [Date] })
-  availableDates: Date[];
+  @ApiProperty({ type: [AvailableRoomDetailDto] })
+  availableRoomDetails: AvailableRoomDetailDto[];
 }

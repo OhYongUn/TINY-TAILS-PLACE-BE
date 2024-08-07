@@ -1,17 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { SearchRoomsDto } from './dto/search-rooms.dto';
-import { RoomDto } from './dto/room.dto';
 import { PrismaService } from '@app/common/prisma/prisma.service';
 import {
   InvalidDateRangeException,
   RoomException,
-  RoomNotAvailableException,
   RoomNotFoundException,
 } from '@apps/rest/room/exceptions/room-exceptions';
 import { RoomErrorCodes } from '@apps/rest/room/exceptions/error-codes';
-import { CreateRoomDto } from '@apps/rest/room/dto/create-room.dto';
-import { UpdateRoomDto } from '@apps/rest/room/dto/ update-room.dto';
 import { AvailableRoomClassDto } from '@apps/rest/room/dto/available-room-class.dto';
+import { CreateRoomDetailDto } from '@apps/rest/room/dto/create-room-detail.dto';
+import { UpdateRoomDto } from '@apps/rest/room/dto/update-room.dto';
 
 @Injectable()
 export class RoomService {
@@ -23,9 +21,6 @@ export class RoomService {
     const { checkInDate, checkOutDate } = params;
     const checkIn = new Date(checkInDate);
     const checkOut = new Date(checkOutDate);
-    const dayCount = Math.ceil(
-      (checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24),
-    );
 
     if (checkIn >= checkOut) {
       throw new InvalidDateRangeException(RoomErrorCodes.INVALID_DATE_RANGE);
@@ -34,74 +29,64 @@ export class RoomService {
     try {
       const availableRooms = await this.prisma.room.findMany({
         where: {
-          availabilities: {
+          roomDetails: {
             some: {
-              date: {
-                gte: checkIn,
-                lt: checkOut,
-              },
-              availableCount: {
-                gt: 0,
+              availabilities: {
+                some: {
+                  date: {
+                    gte: checkIn,
+                    lt: checkOut,
+                  },
+                  availableCount: {
+                    gt: 0,
+                  },
+                },
               },
             },
           },
         },
         include: {
-          availabilities: {
-            where: {
-              date: {
-                gte: checkIn,
-                lt: checkOut,
-              },
-              availableCount: {
-                gt: 0,
+          roomDetails: {
+            include: {
+              availabilities: {
+                where: {
+                  date: {
+                    gte: checkIn,
+                    lt: checkOut,
+                  },
+                },
               },
             },
           },
         },
       });
 
-      if (availableRooms.length === 0) {
-        throw new RoomNotAvailableException(
-          RoomErrorCodes.ROOM_NOT_AVAILABLE,
-          '해당 날짜에 이용 가능한 객실이 없습니다',
-        );
-      }
+      const roomClasses: AvailableRoomClassDto[] = availableRooms.map(
+        (room) => {
+          const availableRoomDetails = room.roomDetails
+            .filter((detail) =>
+              detail.availabilities.every((a) => a.availableCount > 0),
+            )
+            .map((detail) => ({
+              id: detail.id,
+              roomNumber: detail.roomNumber,
+            }));
 
-      const filteredRooms = availableRooms.filter(
-        (room) => room.availabilities.length === dayCount,
-      );
-
-      if (filteredRooms.length === 0) {
-        throw new RoomNotAvailableException(
-          RoomErrorCodes.ROOM_NOT_AVAILABLE,
-          '전체 숙박 기간 동안 완전히 이용 가능한 객실이 없습니다',
-        );
-      }
-
-      const roomClasses = filteredRooms.reduce(
-        (acc, room) => {
-          if (!acc[room.class]) {
-            acc[room.class] = {
-              class: room.class,
-              name: room.name,
-              description: room.description,
-              capacity: room.capacity,
-              basePrice: room.basePrice,
-              size: room.size,
-              imageUrls: room.imageUrls,
-              availableRooms: 0,
-              availableDates: room.availabilities.map((a) => a.date),
-              availableCounts: room.availabilities.map((a) => a.availableCount),
-            };
-          }
-          acc[room.class].availableRooms += 1;
-          return acc;
+          return {
+            id: room.id,
+            name: room.name,
+            class: room.class,
+            description: room.description,
+            capacity: room.capacity,
+            size: room.size,
+            imageUrls: room.imageUrls,
+            availableCount: availableRoomDetails.length,
+            availableRoomDetails: availableRoomDetails,
+          };
         },
-        {} as Record<string, AvailableRoomClassDto>,
       );
 
-      return Object.values(roomClasses);
+      return roomClasses;
     } catch (error) {
       if (error instanceof RoomException) {
         throw error;
@@ -113,49 +98,33 @@ export class RoomService {
     }
   }
 
-  async createRoom(createRoomDto: CreateRoomDto): Promise<RoomDto> {
-    const room = await this.prisma.room.create({
-      data: createRoomDto,
+  create(createRoomDetailDto: CreateRoomDetailDto) {
+    return this.prisma.roomDetail.create({
+      data: createRoomDetailDto,
     });
-    return this.mapToRoomDto(room);
   }
 
-  async getRoom(id: number): Promise<RoomDto> {
-    const room = await this.prisma.room.findUnique({
+  findAll() {
+    return this.prisma.roomDetail.findMany();
+  }
+
+  findOne(id: number) {
+    return this.prisma.roomDetail.findUnique({
+      where: { id },
+      include: { room: true },
+    });
+  }
+
+  update(id: number, UpdateRoomDto: UpdateRoomDto) {
+    return this.prisma.roomDetail.update({
+      where: { id },
+      data: UpdateRoomDto,
+    });
+  }
+
+  remove(id: number) {
+    return this.prisma.roomDetail.delete({
       where: { id },
     });
-    if (!room) {
-      throw new RoomNotFoundException(RoomErrorCodes.ROOM_NOT_FOUND);
-    }
-    return this.mapToRoomDto(room);
-  }
-
-  async updateRoom(id: number, updateRoomDto: UpdateRoomDto): Promise<RoomDto> {
-    const room = await this.prisma.room.update({
-      where: { id },
-      data: updateRoomDto,
-    });
-    return this.mapToRoomDto(room);
-  }
-
-  async deleteRoom(id: number): Promise<void> {
-    await this.prisma.room.delete({
-      where: { id },
-    });
-  }
-
-  private mapToRoomDto(room: any): RoomDto {
-    return {
-      id: room.id,
-      name: room.name,
-      class: room.class,
-      description: room.description,
-      capacity: room.capacity,
-      basePrice: room.basePrice,
-      size: room.size,
-      imageUrls: room.imageUrls,
-      createdAt: room.createdAt,
-      updatedAt: room.updatedAt,
-    };
   }
 }

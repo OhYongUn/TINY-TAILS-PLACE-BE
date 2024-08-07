@@ -1,17 +1,11 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { CreateBookingDto } from './dto/create-booking.dto';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/common/prisma/prisma.service';
-import { CancelBookingDto } from '@apps/rest/booking/dto/cancel-booking.dto';
 
 @Injectable()
 export class BookingService {
   constructor(private prisma: PrismaService) {}
 
-  async initiateBooking(createBookingDto: CreateBookingDto) {
+  /*async initiateBooking(createBookingDto: CreateBookingDto) {
     const {
       userId,
       roomId,
@@ -305,5 +299,5 @@ export class BookingService {
 
       return { booking, payment, amountToPay: basePrice };
     });
-  }
+  }*/
 }

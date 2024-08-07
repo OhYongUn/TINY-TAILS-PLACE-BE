@@ -1,12 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString } from 'class-validator';
+import { IsDate, IsNotEmpty } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class SearchRoomsDto {
   @ApiProperty({ example: '2023-08-01' })
-  @IsDateString()
-  checkInDate: string;
+  @IsNotEmpty()
+  @IsDate()
+  @Type(() => Date)
+  checkInDate: Date;
 
   @ApiProperty({ example: '2023-08-05' })
-  @IsDateString()
-  checkOutDate: string;
+  @IsNotEmpty()
+  @IsDate()
+  @Type(() => Date)
+  checkOutDate: Date;
 }

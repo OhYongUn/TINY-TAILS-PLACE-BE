@@ -11,7 +11,6 @@ import {
   UseFilters,
 } from '@nestjs/common';
 import {
-  ApiBody,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -20,12 +19,11 @@ import {
 } from '@nestjs/swagger';
 import { RoomService } from './room.service';
 import { SearchRoomsDto } from './dto/search-rooms.dto';
-import { RoomDto } from './dto/room.dto';
 import { RoomExceptionFilter } from '@apps/rest/room/exceptions/room-exception.filter';
-import { CreateRoomDto } from '@apps/rest/room/dto/create-room.dto';
-import { UpdateRoomDto } from '@apps/rest/room/dto/ update-room.dto';
-import { AvailableRoomDto } from '@apps/rest/room/dto/available-room.dto';
 import { AvailableRoomClassDto } from '@apps/rest/room/dto/available-room-class.dto';
+import { UpdateRoomDto } from '@apps/rest/room/dto/update-room.dto';
+import { CreateRoomDto } from '@apps/rest/room/dto/create-room.dto';
+import { Room } from '@apps/rest/room/dto/room.dto';
 
 @ApiTags('rooms')
 @Controller('rooms')
@@ -38,7 +36,7 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '사용 가능한 방 목록',
-    type: AvailableRoomDto,
+    type: AvailableRoomClassDto,
     isArray: true,
   })
   @ApiQuery({ name: 'checkInDate', required: true, type: Date })
@@ -50,53 +48,51 @@ export class RoomController {
   }
 
   @Post()
-  @ApiOperation({ summary: '새 방 생성' })
+  @ApiOperation({ summary: '새 객실 생성' })
   @ApiResponse({
     status: 201,
-    description: '생성된 방 정보',
-    type: RoomDto,
+    description: '객실이 성공적으로 생성됨',
+    type: Room,
   })
-  @ApiBody({ type: CreateRoomDto })
-  async createRoom(@Body() createRoomDto: CreateRoomDto): Promise<RoomDto> {
-    return this.roomService.createRoom(createRoomDto);
+  create(@Body() createRoomDto: CreateRoomDto) {
+    return this.roomService.create(createRoomDto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: '모든 객실 조회' })
+  @ApiResponse({ status: 200, description: '객실 목록 반환', type: [Room] })
+  findAll() {
+    return this.roomService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: '특정 방 조회' })
-  @ApiResponse({
-    status: 200,
-    description: '방 정보',
-    type: RoomDto,
-  })
-  @ApiParam({ name: 'id', type: 'number' })
-  async getRoom(@Param('id') id: number): Promise<RoomDto> {
-    return this.roomService.getRoom(id);
+  @ApiOperation({ summary: '특정 객실 조회' })
+  @ApiParam({ name: 'id', description: '객실 ID' })
+  @ApiResponse({ status: 200, description: '객실 정보 반환', type: Room })
+  @ApiResponse({ status: 404, description: '객실을 찾을 수 없음' })
+  findOne(@Param('id') id: string) {
+    return this.roomService.findOne(+id);
   }
 
   @Put(':id')
-  @ApiOperation({ summary: '방 정보 수정' })
+  @ApiOperation({ summary: '객실 정보 수정' })
+  @ApiParam({ name: 'id', description: '객실 ID' })
   @ApiResponse({
     status: 200,
-    description: '수정된 방 정보',
-    type: RoomDto,
+    description: '객실 정보가 성공적으로 수정됨',
+    type: Room,
   })
-  @ApiParam({ name: 'id', type: 'number' })
-  @ApiBody({ type: UpdateRoomDto })
-  async updateRoom(
-    @Param('id') id: number,
-    @Body() updateRoomDto: UpdateRoomDto,
-  ): Promise<RoomDto> {
-    return this.roomService.updateRoom(id, updateRoomDto);
+  @ApiResponse({ status: 404, description: '객실을 찾을 수 없음' })
+  update(@Param('id') id: string, @Body() updateRoomDto: UpdateRoomDto) {
+    return this.roomService.update(Number(id), updateRoomDto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: '방 삭제' })
-  @ApiResponse({
-    status: 204,
-    description: '방 삭제 완료',
-  })
-  @ApiParam({ name: 'id', type: 'number' })
-  async deleteRoom(@Param('id') id: number): Promise<void> {
-    return this.roomService.deleteRoom(id);
+  @ApiOperation({ summary: '객실 삭제' })
+  @ApiParam({ name: 'id', description: '객실 ID' })
+  @ApiResponse({ status: 200, description: '객실이 성공적으로 삭제됨' })
+  @ApiResponse({ status: 404, description: '객실을 찾을 수 없음' })
+  remove(@Param('id') id: string) {
+    return this.roomService.remove(+id);
   }
 }

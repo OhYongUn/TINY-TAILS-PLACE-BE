@@ -1,12 +1,8 @@
 // booking.controller.ts
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
-import { CreateBookingDto } from './dto/create-booking.dto';
-import { ConfirmBookingDto } from '@apps/rest/booking/dto/confirm-booking.dto';
-import { CancelBookingDto } from '@apps/rest/booking/dto/cancel-booking.dto';
 import { PaymentService } from '@apps/rest/payment/payment.service';
-import { InitiateBookingResponseDto } from '@apps/rest/booking/dto/Initiate-booking-response.dto';
 
 @ApiTags('bookings')
 @Controller('bookings')
@@ -16,7 +12,7 @@ export class BookingController {
     private readonly paymentService: PaymentService,
   ) {}
 
-  @Post('initiate')
+  /*@Post('initiate')
   @ApiOperation({ summary: '예약 초기화 및 결제 준비' })
   @ApiResponse({
     status: 201,
@@ -53,7 +49,7 @@ export class BookingController {
     return this.bookingService.getBookingByNum(bookingNum);
   }
 
-  /*--------------------------------------------*/
+  /!*--------------------------------------------*!/
   @Post('initiate')
   @ApiOperation({
     summary: '예약 초기화',
@@ -63,10 +59,10 @@ export class BookingController {
     status: 201,
     description: '예약이 성공적으로 초기화되었습니다.',
   })
-  /*  @ApiResponse({ status: 400, description: '잘못된 요청 데이터' })
+  /!*  @ApiResponse({ status: 400, description: '잘못된 요청 데이터' })
   async initiateBooking(@Body() createBookingDto: CreateBookingDto) {
     return this.bookingService.initiateBooking(createBookingDto);
-  }*/
+  }*!/
   @Post('confirm')
   @ApiOperation({
     summary: '예약 확정',
@@ -96,5 +92,5 @@ export class BookingController {
   @ApiResponse({ status: 404, description: '예약을 찾을 수 없습니다.' })
   async cancelBooking(@Body() cancelBookingDto: CancelBookingDto) {
     return this.bookingService.cancelBooking(cancelBookingDto);
-  }
+  }*/
 }

@@ -1,7 +1,6 @@
-// room.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 
-export class RoomDto {
+export class Room {
   @ApiProperty()
   id: number;
 
@@ -16,9 +15,6 @@ export class RoomDto {
 
   @ApiProperty()
   capacity: number;
-
-  @ApiProperty()
-  basePrice: number;
 
   @ApiProperty()
   size: number;
