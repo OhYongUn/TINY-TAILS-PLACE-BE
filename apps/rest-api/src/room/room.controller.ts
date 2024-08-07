@@ -20,7 +20,6 @@ export class RoomController {
   })
   @ApiQuery({ name: 'checkInDate', required: true, type: Date })
   @ApiQuery({ name: 'checkOutDate', required: true, type: Date })
-  @ApiQuery({ name: 'petNum', required: true, type: Number })
   async getAvailableRooms(
     @Query() query: AvailableRoomsDto,
   ): Promise<RoomDto[]> {

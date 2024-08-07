@@ -8,19 +8,19 @@ export class RoomService {
   constructor(private prisma: PrismaService) {}
 
   async findAvailableRooms(params: AvailableRoomsDto): Promise<RoomDto[]> {
-    const { checkInDate, checkOutDate, petNum } = params;
+    const { checkInDate, checkOutDate } = params;
     const checkIn = new Date(checkInDate);
     const checkOut = new Date(checkOutDate);
-    const petNumInt = parseInt(petNum, 10);
-
-    console.log('Query params:', { checkIn, checkOut, petNumInt });
+    const dayCount = Math.ceil(
+      (checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24),
+    );
+    console.log('checkIn', checkIn);
+    console.log('checkOut', checkOut);
+    console.log('dayCount', dayCount);
 
     try {
       const availableRooms = await this.prisma.room.findMany({
         where: {
-          capacity: {
-            gte: petNumInt,
-          },
           availabilities: {
             some: {
               date: {
@@ -33,7 +33,15 @@ export class RoomService {
             },
           },
         },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          class: true,
+          size: true,
+          basePrice: true,
+          imageUrls: true,
+          description: true,
+          capacity: true,
           availabilities: {
             where: {
               date: {
@@ -44,22 +52,26 @@ export class RoomService {
                 gt: 0,
               },
             },
-            orderBy: {
-              date: 'asc',
+            select: {
+              date: true,
+              availableCount: true,
             },
           },
         },
-        distinct: ['class'],
       });
 
       console.log('Query result:', availableRooms);
 
-      if (!availableRooms || availableRooms.length === 0) {
+      const filteredRooms = availableRooms.filter(
+        (room) => room.availabilities.length === dayCount,
+      );
+
+      if (filteredRooms.length === 0) {
         console.log('No available rooms found');
         return [];
       }
 
-      return availableRooms.map(
+      return filteredRooms.map(
         (room): RoomDto => ({
           id: room.id,
           name: room.name,
