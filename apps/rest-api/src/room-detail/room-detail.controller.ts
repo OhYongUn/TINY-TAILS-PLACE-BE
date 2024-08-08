@@ -37,14 +37,15 @@ export class RoomDetailController {
   @ApiResponse({
     status: 200,
     description: '객실 상세 정보 목록',
-    type: Type<RoomDetailSchema>(() => RoomDetailSchema),
+    type: RoomDetailSchema,
+    isArray: true,
   })
   @ApiQuery({ name: 'roomId', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, enum: RoomStatus })
   findAll(
     @Query('roomId') roomId?: number,
     @Query('status') status?: RoomStatus,
-  ) {
+  ): Promise<RoomDetailSchema[]> {
     return this.roomDetailService.findAll(roomId, status);
   }
 

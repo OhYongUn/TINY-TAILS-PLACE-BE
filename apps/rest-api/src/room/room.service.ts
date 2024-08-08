@@ -10,6 +10,7 @@ import { RoomErrorCodes } from '@apps/rest/room/exceptions/error-codes';
 import { AvailableRoomClassDto } from '@apps/rest/room/dto/available-room-class.dto';
 import { UpdateRoomDto } from '@apps/rest/room/dto/update-room.dto';
 import { CreateRoomDto } from '@apps/rest/room/dto/create-room.dto';
+import { Room } from '@apps/rest/room/dto/room.dto';
 
 @Injectable()
 export class RoomService {
@@ -104,7 +105,7 @@ export class RoomService {
     });
   }
 
-  findAll() {
+  async findAll(): Promise<Room[]> {
     return this.prisma.room.findMany();
   }
 

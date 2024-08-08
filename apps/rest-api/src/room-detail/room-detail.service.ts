@@ -3,7 +3,7 @@ import { RoomStatus } from '@prisma/client';
 import { PrismaService } from '@app/common/prisma/prisma.service';
 import { CreateRoomDetailDto } from '@apps/rest/room-detail/dto/create-room-detail.dto';
 import { UpdateRoomDetailDto } from '@apps/rest/room-detail/dto/update-room-detail.dto';
-
+import { RoomDetailSchema } from '@apps/rest/room-detail/dto/RoomDetailSchema';
 @Injectable()
 export class RoomDetailService {
   constructor(private prisma: PrismaService) {}
@@ -14,7 +14,10 @@ export class RoomDetailService {
     });
   }
 
-  findAll(roomId?: number, status?: RoomStatus) {
+  async findAll(
+    roomId?: number,
+    status?: RoomStatus,
+  ): Promise<RoomDetailSchema[]> {
     const where: any = {};
     if (roomId) where.roomId = roomId;
     if (status) where.status = status;

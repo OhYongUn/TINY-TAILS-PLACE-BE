@@ -24,7 +24,6 @@ import { AvailableRoomClassDto } from '@apps/rest/room/dto/available-room-class.
 import { UpdateRoomDto } from '@apps/rest/room/dto/update-room.dto';
 import { CreateRoomDto } from '@apps/rest/room/dto/create-room.dto';
 import { Room } from '@apps/rest/room/dto/room.dto';
-import { Type } from 'class-transformer';
 
 @ApiTags('rooms')
 @Controller('rooms')
@@ -64,10 +63,10 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '객실 목록 반환',
-    type: Type<Room>(() => Room),
+    type: Room,
     isArray: true,
   })
-  findAll() {
+  findAll(): Promise<Room[]> {
     return this.roomService.findAll();
   }
 
