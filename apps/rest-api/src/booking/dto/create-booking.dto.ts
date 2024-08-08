@@ -1,14 +1,17 @@
 import {
   IsBoolean,
   IsDate,
+  IsEnum,
   IsInt,
   IsNumber,
+  IsOptional,
   IsString,
   Max,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BookingStatus } from '@prisma/client';
 
 export class CreateBookingDto {
   @ApiProperty({ description: '사용자 ID' })
@@ -17,7 +20,7 @@ export class CreateBookingDto {
 
   @ApiProperty({ description: '객실 ID' })
   @IsInt()
-  roomId: number;
+  roomDetailId: number;
 
   @ApiProperty({ description: '체크인 날짜' })
   @IsDate()
@@ -55,9 +58,14 @@ export class CreateBookingDto {
   @IsNumber()
   totalPrice: number;
 
-  @ApiProperty({ description: '예약 상태' })
-  @IsString()
-  status: string;
+  @ApiPropertyOptional({
+    description: '예약 상태',
+    enum: BookingStatus,
+    default: BookingStatus.PENDING,
+  })
+  @IsEnum(BookingStatus)
+  @IsOptional()
+  status?: BookingStatus;
 
   @ApiPropertyOptional({ description: '특별 요청 사항' })
   @IsString()

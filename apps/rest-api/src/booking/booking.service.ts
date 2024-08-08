@@ -1,27 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@app/common/prisma/prisma.service';
+import { CreateBookingDto } from '@apps/rest/booking/dto/create-booking.dto';
+import { BookingStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class BookingService {
   constructor(private prisma: PrismaService) {}
 
-  /*async initiateBooking(createBookingDto: CreateBookingDto) {
+  async createBookingAndInitiatePayment(createBookingDto: CreateBookingDto) {
     const {
       userId,
-      roomId,
+      roomDetailId,
       checkInDate,
       checkOutDate,
       requestedLateCheckout,
       requestedEarlyCheckin,
       petCount,
+      basePrice,
+      additionalFees,
+      totalPrice,
       specialRequests,
-      paymentMethod, // 새로 추가된 필드
+      status,
     } = createBookingDto;
 
     return this.prisma.$transaction(async (prisma) => {
       // 방 가용성 확인
       const isAvailable = await this.checkRoomAvailability(
-        roomId,
+        prisma,
+        roomDetailId,
         checkInDate,
         checkOutDate,
       );
@@ -31,134 +41,58 @@ export class BookingService {
         );
       }
 
-      // 기본 가격 계산
-      const room = await prisma.room.findUnique({ where: { id: roomId } });
-      if (!room || typeof room.basePrice !== 'number') {
-        throw new NotFoundException('Room not found or has invalid base price');
-      }
-      const nights = Math.ceil(
-        (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24),
-      );
-      const basePrice = room.basePrice * nights;
-
       // Booking 생성
       const booking = await prisma.booking.create({
         data: {
           userId,
-          roomId,
+          roomDetailId,
           checkInDate,
           checkOutDate,
           requestedLateCheckout,
           requestedEarlyCheckin,
           petCount,
           basePrice,
-          totalPrice: basePrice,
-          status: 'PENDING',
+          additionalFees,
+          totalPrice,
           specialRequests,
-          // bookingNum은 자동 생성됨 (@default(uuid()) 설정에 의해)
+          status: status || BookingStatus.PENDING,
         },
       });
 
       // Payment 생성
       const payment = await prisma.payment.create({
         data: {
+          amount: totalPrice, // basePrice 대신 totalPrice 사용
+          status: PaymentStatus.PENDING, // 열거형 사용 권장
+          method: PaymentMethod.INITIAL, // 열거형 사용 권장
+          type: PaymentType.INITIAL, // 열거형 사용 권장
           bookingId: booking.id,
-          amount: basePrice,
-          status: 'PENDING',
-          method: paymentMethod,
         },
       });
 
       // RoomAvailability 업데이트
       await this.updateRoomAvailability(
         prisma,
-        roomId,
+        roomDetailId,
         checkInDate,
         checkOutDate,
         -1,
       );
 
-      return { booking, payment };
+      return { booking, payment, amountToPay: totalPrice }; // basePrice 대신 totalPrice 반환
     });
   }
 
-  async cancelBooking(cancelBookingDto: CancelBookingDto) {
-    const { bookingId } = cancelBookingDto;
-
-    return this.prisma.$transaction(async (prisma) => {
-      const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
-        include: { payments: true },
-      });
-
-      if (!booking) {
-        throw new NotFoundException('Booking not found');
-      }
-
-      if (booking.status !== 'CONFIRMED') {
-        throw new BadRequestException('Booking is not in a confirmed state');
-      }
-
-      const cancellationFee = await this.calculateCancellationFee(booking);
-      const refundAmount = booking.totalPrice - cancellationFee;
-
-      // 취소 처리
-      const updatedBooking = await prisma.booking.update({
-        where: { id: bookingId },
-        data: { status: 'CANCELLED' },
-      });
-
-      // RoomAvailability 복원
-      await this.updateRoomAvailability(
-        prisma,
-        booking.roomId,
-        booking.checkInDate,
-        booking.checkOutDate,
-        1,
-      );
-
-      // 환불 처리
-      if (refundAmount > 0) {
-        await prisma.payment.create({
-          data: {
-            bookingId: bookingId,
-            amount: refundAmount,
-            status: 'COMPLETED',
-            method: 'REFUND',
-            type: 'REFUND',
-          },
-        });
-      }
-
-      // 취소 수수료 처리
-      if (cancellationFee > 0) {
-        await prisma.payment.create({
-          data: {
-            bookingId: bookingId,
-            amount: cancellationFee,
-            status: 'COMPLETED',
-            method: 'CANCELLATION_FEE',
-            type: 'CANCELLATION_FEE',
-          },
-        });
-      }
-
-      return {
-        booking: updatedBooking,
-        cancellationFee,
-        refundAmount,
-      };
-    });
-  }
-
+  // 가용성 체크 메서드
   private async checkRoomAvailability(
-    roomId: number,
+    prisma: Prisma.TransactionClient,
+    roomDetailId: number,
     checkInDate: Date,
     checkOutDate: Date,
   ): Promise<boolean> {
-    const availabilities = await this.prisma.roomAvailability.findMany({
+    const availabilities = await prisma.roomAvailability.findMany({
       where: {
-        roomId,
+        roomDetailId,
         date: {
           gte: checkInDate,
           lt: checkOutDate,
@@ -170,42 +104,24 @@ export class BookingService {
     const requiredDays = Math.ceil(
       (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24),
     );
+
     return availabilities.length === requiredDays;
   }
 
-  private async calculateCancellationFee(booking: any): Promise<number> {
-    const now = new Date();
-    const checkInDate = new Date(booking.checkInDate);
-    const daysUntilCheckIn = Math.ceil(
-      (checkInDate.getTime() - now.getTime()) / (1000 * 3600 * 24),
-    );
-
-    if (daysUntilCheckIn > 14) {
-      return 0; // 전액 환불
-    } else if (daysUntilCheckIn > 7) {
-      return booking.totalPrice * 0.1; // 10% 수수료
-    } else if (daysUntilCheckIn > 3) {
-      return booking.totalPrice * 0.3; // 30% 수수료
-    } else if (daysUntilCheckIn > 1) {
-      return booking.totalPrice * 0.5; // 50% 수수료
-    } else {
-      return booking.totalPrice; // 환불 불가
-    }
-  }
-
+  // RoomAvailability 업데이트 메서드
   private async updateRoomAvailability(
-    prisma: any,
-    roomId: number,
+    prisma: Prisma.TransactionClient,
+    roomDetailId: number,
     checkInDate: Date,
     checkOutDate: Date,
     changeAmount: number,
-  ) {
+  ): Promise<void> {
     const dates = this.getDatesInRange(checkInDate, checkOutDate);
     for (const date of dates) {
       await prisma.roomAvailability.updateMany({
         where: {
-          roomId: roomId,
-          date: date,
+          roomDetailId,
+          date,
         },
         data: {
           availableCount: { increment: changeAmount },
@@ -216,88 +132,11 @@ export class BookingService {
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {
     const dates = [];
-    const currentDate = new Date(startDate);
+    let currentDate = new Date(startDate);
     while (currentDate < endDate) {
       dates.push(new Date(currentDate));
       currentDate.setDate(currentDate.getDate() + 1);
     }
     return dates;
   }
-
-  async createBookingAndInitiatePayment(createBookingDto: CreateBookingDto) {
-    const {
-      userId,
-      roomId,
-      checkInDate,
-      checkOutDate,
-      requestedLateCheckout,
-      requestedEarlyCheckin,
-      petCount,
-      specialRequests,
-      paymentMethod,
-    } = createBookingDto;
-
-    return this.prisma.$transaction(async (prisma) => {
-      // 방 가용성 확인
-      const isAvailable = await this.checkRoomAvailability(
-        roomId,
-        checkInDate,
-        checkOutDate,
-      );
-      if (!isAvailable) {
-        throw new BadRequestException(
-          'Room is not available for the selected dates',
-        );
-      }
-
-      // 기본 가격 계산
-      const room = await prisma.room.findUnique({ where: { id: roomId } });
-      if (!room || typeof room.basePrice !== 'number') {
-        throw new NotFoundException('Room not found or has invalid base price');
-      }
-      const nights = Math.ceil(
-        (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 3600 * 24),
-      );
-      const basePrice = room.basePrice * nights;
-
-      // Booking 생성
-      const booking = await prisma.booking.create({
-        data: {
-          userId,
-          roomId,
-          checkInDate,
-          checkOutDate,
-          requestedLateCheckout,
-          requestedEarlyCheckin,
-          petCount,
-          basePrice,
-          totalPrice: basePrice,
-          status: 'PENDING',
-          specialRequests,
-        },
-      });
-
-      // Payment 생성
-      const payment = await prisma.payment.create({
-        data: {
-          amount: basePrice,
-          status: 'PENDING',
-          method: paymentMethod,
-          type: 'INITIAL',
-          bookingId: booking.id,
-        },
-      });
-
-      // RoomAvailability 업데이트
-      await this.updateRoomAvailability(
-        prisma,
-        roomId,
-        checkInDate,
-        checkOutDate,
-        -1,
-      );
-
-      return { booking, payment, amountToPay: basePrice };
-    });
-  }*/
 }
