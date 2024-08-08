@@ -244,3 +244,25 @@ enum BookingStatus {
   CHECKED_OUT
   CANCELLED
 }
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  PAYPAL
+  CASH
+}
+
+enum PaymentType {
+  INITIAL
+  ADDITIONAL
+  REFUND
+}
