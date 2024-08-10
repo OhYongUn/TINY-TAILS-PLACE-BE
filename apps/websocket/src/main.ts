@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { WebsoketModule } from './websoket.module';
+import { WebsocketModule } from './websocket.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(WebsoketModule);
+  const app = await NestFactory.create(WebsocketModule);
   await app.listen(3000);
 }
+
 bootstrap();

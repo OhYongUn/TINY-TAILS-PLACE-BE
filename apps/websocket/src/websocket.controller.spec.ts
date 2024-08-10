@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { WebsoketController } from './websoket.controller';
-import { WebsoketService } from './websoket.service';
+import { WebsocketController } from './websocket.controller';
+import { WebsocketService } from './websocket.service';
 
 describe('WebsoketController', () => {
-  let websoketController: WebsoketController;
+  let websoketController: WebsocketController;
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
-      controllers: [WebsoketController],
-      providers: [WebsoketService],
+      controllers: [WebsocketController],
+      providers: [WebsocketService],
     }).compile();
 
-    websoketController = app.get<WebsoketController>(WebsoketController);
+    websoketController = app.get<WebsocketController>(WebsocketController);
   });
 
   describe('root', () => {
