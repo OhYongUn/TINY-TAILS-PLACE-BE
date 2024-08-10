@@ -6,11 +6,11 @@ import {
   RoomException,
   RoomNotFoundException,
 } from '@apps/rest/room/exceptions/room-exceptions';
-import { RoomErrorCodes } from '@apps/rest/room/exceptions/error-codes';
 import { AvailableRoomClassDto } from '@apps/rest/room/dto/available-room-class.dto';
 import { UpdateRoomDto } from '@apps/rest/room/dto/update-room.dto';
 import { CreateRoomDto } from '@apps/rest/room/dto/create-room.dto';
 import { Room } from '@apps/rest/room/dto/room.dto';
+import { ErrorCode } from '@apps/rest/room/exceptions/error-codes';
 
 @Injectable()
 export class RoomService {
@@ -24,7 +24,7 @@ export class RoomService {
     const checkOut = new Date(checkOutDate);
 
     if (checkIn >= checkOut) {
-      throw new InvalidDateRangeException(RoomErrorCodes.INVALID_DATE_RANGE);
+      throw new InvalidDateRangeException();
     }
 
     try {
@@ -67,6 +67,9 @@ export class RoomService {
           },
         },
       });
+      if (availableRooms.length == 0) {
+        throw new RoomNotFoundException();
+      }
 
       const roomClasses: AvailableRoomClassDto[] = availableRooms.map(
         (room) => {
@@ -111,13 +114,13 @@ export class RoomService {
 
       return roomClasses;
     } catch (error) {
-      if (error instanceof RoomException) {
-        throw error;
+      if (!(error instanceof RoomException)) {
+        throw new RoomException(
+          new ErrorCode('INTERNAL_SERVER_ERROR', 500, 'Internal Server Error'),
+          'An unexpected error occurred',
+        );
       }
-      throw new RoomNotFoundException(
-        RoomErrorCodes.ROOM_NOT_FOUND,
-        '이용 가능한 객실을 찾는 중 오류가 발생했습니다',
-      );
+      throw error;
     }
   }
 

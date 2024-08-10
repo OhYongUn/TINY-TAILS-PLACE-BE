@@ -1,5 +1,4 @@
-// src/exceptions/room-exceptions.ts
-import { ErrorCode } from './error-codes';
+import { ErrorCode, RoomErrorCodes } from './error-codes';
 
 export class RoomException extends Error {
   constructor(
@@ -9,28 +8,36 @@ export class RoomException extends Error {
     super(message || errorCode.message);
     this.name = this.constructor.name;
   }
+
+  getStatusCode(): number {
+    return this.errorCode.statusCode;
+  }
+
+  getErrorMessage(): string {
+    return this.message || this.errorCode.message;
+  }
 }
 
 export class RoomNotFoundException extends RoomException {
-  constructor(errorCode: ErrorCode, message?: string) {
-    super(errorCode, message || '객실을 찾을 수 없습니다');
+  constructor() {
+    super(RoomErrorCodes.ROOM_NOT_FOUND);
   }
 }
 
 export class RoomNotAvailableException extends RoomException {
-  constructor(errorCode: ErrorCode, message?: string) {
-    super(errorCode, message || '해당 날짜에 이용 가능한 객실이 없습니다');
+  constructor() {
+    super(RoomErrorCodes.ROOM_NOT_AVAILABLE);
   }
 }
 
 export class InvalidDateRangeException extends RoomException {
-  constructor(errorCode: ErrorCode, message?: string) {
-    super(errorCode, message || '잘못된 날짜 범위입니다');
+  constructor() {
+    super(RoomErrorCodes.INVALID_DATE_RANGE);
   }
 }
 
 export class CapacityExceededException extends RoomException {
-  constructor(errorCode: ErrorCode, message?: string) {
-    super(errorCode, message || '객실 수용 인원을 초과했습니다');
+  constructor() {
+    super(RoomErrorCodes.CAPACITY_EXCEEDED);
   }
 }
