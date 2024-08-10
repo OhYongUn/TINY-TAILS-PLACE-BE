@@ -1,14 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "apps/tiny-tails-place-be/src",
-  "compilerOptions": {
-    "deleteOutDir": true,
-    "webpack": true,
-    "tsConfigPath": "apps/tiny-tails-place-be/tsconfig.app.json"
-  },
   "monorepo": true,
-  "root": "apps/rest-api",
+  "root": ".",
+  "sourceRoot": "apps",
+  "compilerOptions": {
+    "webpack": true,
+    "tsConfigPath": "tsconfig.json"
+  },
   "projects": {
     "rest-api": {
       "type": "application",
@@ -19,13 +18,13 @@
         "tsConfigPath": "apps/rest-api/tsconfig.app.json"
       }
     },
-    "websoket": {
+    "websocket": {
       "type": "application",
-      "root": "apps/websoket",
+      "root": "apps/websocket",
       "entryFile": "main",
-      "sourceRoot": "apps/websoket/src",
+      "sourceRoot": "apps/websocket/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/websoket/tsconfig.app.json"
+        "tsConfigPath": "apps/websocket/tsconfig.app.json"
       }
     },
     "batch": {
