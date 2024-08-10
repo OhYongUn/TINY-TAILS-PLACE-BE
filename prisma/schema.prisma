@@ -7,14 +7,14 @@
 // 3. (선택적) Prisma 클라이언트 재생성:
 // npx prisma generate
 
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model User {
@@ -43,8 +43,8 @@ model Room {
   imageUrls   String[]     @map("image_urls")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
-  prices      RoomPrice[]
   roomDetails RoomDetail[]
+  prices      RoomPrice[]
 
   @@map("ROOMS")
 }
@@ -52,7 +52,6 @@ model Room {
 model RoomDetail {
   id              Int                @id @default(autoincrement()) @map("id")
   roomId          Int                @map("room_id")
-  room            Room               @relation(fields: [roomId], references: [id])
   roomNumber      String             @unique @map("room_number")
   currentCheckIn  DateTime?          @map("current_check_in")
   currentCheckOut DateTime?          @map("current_check_out")
@@ -65,6 +64,7 @@ model RoomDetail {
   cleaningLogs    CleaningLog[]
   maintenanceLogs MaintenanceLog[]
   availabilities  RoomAvailability[]
+  room            Room               @relation(fields: [roomId], references: [id])
 
   @@index([roomId])
   @@index([status])
@@ -74,9 +74,9 @@ model RoomDetail {
 model RoomAvailability {
   id             Int        @id @default(autoincrement()) @map("id")
   roomDetailId   Int        @map("room_detail_id")
-  roomDetail     RoomDetail @relation(fields: [roomDetailId], references: [id])
   date           DateTime   @map("date")
   availableCount Int        @map("available_count")
+  roomDetail     RoomDetail @relation(fields: [roomDetailId], references: [id])
 
   @@unique([roomDetailId, date])
   @@index([date])
@@ -86,11 +86,11 @@ model RoomAvailability {
 model RoomPrice {
   id        Int       @id @default(autoincrement()) @map("id")
   roomId    Int       @map("room_id")
-  room      Room      @relation(fields: [roomId], references: [id])
   startDate DateTime  @map("start_date")
   endDate   DateTime  @map("end_date")
   price     Float     @map("price")
   type      PriceType @map("type")
+  room      Room      @relation(fields: [roomId], references: [id])
 
   @@index([roomId])
   @@index([startDate, endDate])
@@ -101,9 +101,7 @@ model Booking {
   id                    Int           @id @default(autoincrement()) @map("id")
   bookingNum            String        @unique @default(uuid()) @map("booking_num")
   userId                Int           @map("user_id")
-  user                  User          @relation(fields: [userId], references: [id])
   roomDetailId          Int           @map("room_detail_id")
-  roomDetail            RoomDetail    @relation(fields: [roomDetailId], references: [id])
   checkInDate           DateTime      @map("check_in_date")
   checkOutDate          DateTime      @map("check_out_date")
   requestedLateCheckout Boolean       @default(false) @map("requested_late_checkout")
@@ -118,7 +116,9 @@ model Booking {
   specialRequests       String?       @map("special_requests")
   createdAt             DateTime      @default(now()) @map("created_at")
   updatedAt             DateTime      @updatedAt @map("updated_at")
-  payments              Payment[]
+  roomDetail            RoomDetail    @relation(fields: [roomDetailId], references: [id])
+  user                  User          @relation(fields: [userId], references: [id])
+  payments              Payment?
 
   @@index([userId])
   @@index([roomDetailId])
@@ -130,10 +130,10 @@ model Booking {
 model CleaningLog {
   id           Int        @id @default(autoincrement()) @map("id")
   roomDetailId Int        @map("room_detail_id")
-  roomDetail   RoomDetail @relation(fields: [roomDetailId], references: [id])
   cleanedAt    DateTime   @map("cleaned_at")
   cleanedBy    String     @map("cleaned_by")
   notes        String?    @map("notes")
+  roomDetail   RoomDetail @relation(fields: [roomDetailId], references: [id])
 
   @@index([roomDetailId])
   @@index([cleanedAt])
@@ -143,12 +143,12 @@ model CleaningLog {
 model MaintenanceLog {
   id           Int        @id @default(autoincrement()) @map("id")
   roomDetailId Int        @map("room_detail_id")
-  roomDetail   RoomDetail @relation(fields: [roomDetailId], references: [id])
   issue        String     @map("issue")
   reportedAt   DateTime   @map("reported_at")
   resolvedAt   DateTime?  @map("resolved_at")
   status       String     @map("status")
   notes        String?    @map("notes")
+  roomDetail   RoomDetail @relation(fields: [roomDetailId], references: [id])
 
   @@index([roomDetailId])
   @@index([status])
@@ -175,12 +175,12 @@ model Product {
 model Order {
   id          Int         @id @default(autoincrement()) @map("id")
   userId      Int         @map("user_id")
-  user        User        @relation(fields: [userId], references: [id])
-  orderItems  OrderItem[]
   totalAmount Float       @map("total_amount")
   status      String      @map("status")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
+  user        User        @relation(fields: [userId], references: [id])
+  orderItems  OrderItem[]
   payment     Payment?
 
   @@index([userId])
@@ -191,11 +191,11 @@ model Order {
 model OrderItem {
   id        Int     @id @default(autoincrement()) @map("id")
   orderId   Int     @map("order_id")
-  order     Order   @relation(fields: [orderId], references: [id])
   productId Int     @map("product_id")
-  product   Product @relation(fields: [productId], references: [id])
   quantity  Int     @map("quantity")
   price     Float   @map("price")
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
@@ -209,12 +209,12 @@ model Payment {
   method        String   @map("method")
   type          String   @map("type")
   bookingId     Int?     @unique @map("booking_id")
-  booking       Booking? @relation(fields: [bookingId], references: [id])
   orderId       Int?     @unique @map("order_id")
-  order         Order?   @relation(fields: [orderId], references: [id])
   transactionId String?  @map("transaction_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+  booking       Booking? @relation(fields: [bookingId], references: [id])
+  order         Order?   @relation(fields: [orderId], references: [id])
 
   @@index([status])
   @@index([method])
