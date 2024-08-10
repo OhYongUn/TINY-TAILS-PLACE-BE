@@ -9,7 +9,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingStatus } from '@prisma/client';
 
@@ -24,12 +24,12 @@ export class CreateBookingDto {
 
   @ApiProperty({ description: '체크인 날짜' })
   @IsDate()
-  @Type(() => Date)
+  @Transform(({ value }) => new Date(value))
   checkInDate: Date;
 
   @ApiProperty({ description: '체크아웃 날짜' })
   @IsDate()
-  @Type(() => Date)
+  @Transform(({ value }) => new Date(value))
   checkOutDate: Date;
 
   @ApiProperty({ description: '늦은 체크아웃 요청 여부', default: false })
@@ -70,8 +70,4 @@ export class CreateBookingDto {
   @ApiPropertyOptional({ description: '특별 요청 사항' })
   @IsString()
   specialRequests?: string;
-
-  @ApiPropertyOptional({ description: '예약 고유 번호' })
-  @IsString()
-  bookingNum: string;
 }

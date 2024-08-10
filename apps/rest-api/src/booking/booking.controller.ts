@@ -5,7 +5,6 @@ import { BookingService } from './booking.service';
 import { PaymentService } from '@apps/rest/payment/payment.service';
 import { InitiateBookingResponseDto } from '@apps/rest/booking/dto/Initiate-booking-response.dto';
 import { CreateBookingDto } from '@apps/rest/booking/dto/create-booking.dto';
-import { CompleteBookingDto } from '@apps/rest/booking/dto/complete-booking,dto';
 
 @ApiTags('bookings')
 @Controller('bookings')
@@ -19,7 +18,7 @@ export class BookingController {
   @ApiOperation({ summary: '예약 초기화 및 결제 준비' })
   @ApiResponse({
     status: 201,
-    description: '예약 초기화 성공',
+    description: '예약 초기화 및 결제 준비 성공',
     type: InitiateBookingResponseDto,
   })
   async initiateBooking(
@@ -33,7 +32,6 @@ export class BookingController {
       bookingNum: result.booking.bookingNum,
       paymentId: result.payment.id,
       totalAmount: result.booking.totalPrice,
-      // 결제 게이트웨이에 필요한 추가 정보가 있다면 여기에 추가
     };
   }
 

@@ -27,6 +27,9 @@ export class AvailableRoomClassDto {
   @ApiProperty()
   size: number;
 
+  @ApiProperty()
+  price: number;
+
   @ApiProperty({ type: [String] })
   imageUrls: string[];
 

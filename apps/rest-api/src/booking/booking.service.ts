@@ -1,11 +1,13 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/common/prisma/prisma.service';
 import { CreateBookingDto } from '@apps/rest/booking/dto/create-booking.dto';
-import { BookingStatus, Prisma } from '@prisma/client';
+import {
+  BookingStatus,
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+  Prisma,
+} from '@prisma/client';
 
 @Injectable()
 export class BookingService {
@@ -28,7 +30,6 @@ export class BookingService {
     } = createBookingDto;
 
     return this.prisma.$transaction(async (prisma) => {
-      // 방 가용성 확인
       const isAvailable = await this.checkRoomAvailability(
         prisma,
         roomDetailId,
@@ -64,12 +65,11 @@ export class BookingService {
         data: {
           amount: totalPrice, // basePrice 대신 totalPrice 사용
           status: PaymentStatus.PENDING, // 열거형 사용 권장
-          method: PaymentMethod.INITIAL, // 열거형 사용 권장
+          method: PaymentMethod.CREDIT_CARD, // 열거형 사용 권장
           type: PaymentType.INITIAL, // 열거형 사용 권장
           bookingId: booking.id,
         },
       });
-
       // RoomAvailability 업데이트
       await this.updateRoomAvailability(
         prisma,
@@ -90,12 +90,14 @@ export class BookingService {
     checkInDate: Date,
     checkOutDate: Date,
   ): Promise<boolean> {
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
     const availabilities = await prisma.roomAvailability.findMany({
       where: {
         roomDetailId,
         date: {
-          gte: checkInDate,
-          lt: checkOutDate,
+          gte: checkIn,
+          lt: checkOut,
         },
         availableCount: { gt: 0 },
       },
@@ -132,7 +134,7 @@ export class BookingService {
 
   private getDatesInRange(startDate: Date, endDate: Date): Date[] {
     const dates = [];
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
     while (currentDate < endDate) {
       dates.push(new Date(currentDate));
       currentDate.setDate(currentDate.getDate() + 1);

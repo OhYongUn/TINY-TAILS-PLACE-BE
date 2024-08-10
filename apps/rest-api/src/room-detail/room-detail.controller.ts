@@ -14,7 +14,6 @@ import { CreateRoomDetailDto } from '@apps/rest/room-detail/dto/create-room-deta
 import { RoomStatus } from '@prisma/client';
 import { UpdateRoomDetailDto } from '@apps/rest/room-detail/dto/update-room-detail.dto';
 import { RoomDetailSchema } from '@apps/rest/room-detail/dto/RoomDetailSchema';
-import { Type } from 'class-transformer';
 
 @ApiTags('room-details')
 @Controller('room-details')

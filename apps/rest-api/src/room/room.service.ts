@@ -59,6 +59,12 @@ export class RoomService {
               },
             },
           },
+          prices: {
+            where: {
+              startDate: { lte: checkOut },
+              endDate: { gte: checkIn },
+            },
+          },
         },
       });
 
@@ -73,6 +79,21 @@ export class RoomService {
               roomNumber: detail.roomNumber,
             }));
 
+          // 해당 기간 동안의 가격 계산
+          const price = room.prices.reduce((acc, curr) => {
+            const overlapStart = new Date(
+              Math.max(curr.startDate.getTime(), checkIn.getTime()),
+            );
+            const overlapEnd = new Date(
+              Math.min(curr.endDate.getTime(), checkOut.getTime()),
+            );
+            const days = Math.ceil(
+              (overlapEnd.getTime() - overlapStart.getTime()) /
+                (1000 * 60 * 60 * 24),
+            );
+            return acc + curr.price * days;
+          }, 0);
+
           return {
             id: room.id,
             name: room.name,
@@ -83,6 +104,7 @@ export class RoomService {
             imageUrls: room.imageUrls,
             availableCount: availableRoomDetails.length,
             availableRoomDetails: availableRoomDetails,
+            price: price, // 계산된 가격 추가
           };
         },
       );
