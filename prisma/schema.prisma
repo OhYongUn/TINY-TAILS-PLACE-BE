@@ -9,6 +9,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -203,18 +204,18 @@ model OrderItem {
 }
 
 model Payment {
-  id            Int      @id @default(autoincrement()) @map("id")
-  amount        Float    @map("amount")
-  status        String   @map("status")
-  method        String   @map("method")
-  type          String   @map("type")
-  bookingId     Int?     @unique @map("booking_id")
-  orderId       Int?     @unique @map("order_id")
-  transactionId String?  @map("transaction_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  booking       Booking? @relation(fields: [bookingId], references: [id])
-  order         Order?   @relation(fields: [orderId], references: [id])
+  id            Int           @id @default(autoincrement()) @map("id")
+  amount        Float         @map("amount")
+  status        PaymentStatus @map("status")
+  method        PaymentMethod @map("method")
+  type          PaymentType   @map("type")
+  bookingId     Int?          @unique @map("booking_id")
+  orderId       Int?          @unique @map("order_id")
+  transactionId String?       @map("transaction_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  booking       Booking?      @relation(fields: [bookingId], references: [id])
+  order         Order?        @relation(fields: [orderId], references: [id])
 
   @@index([status])
   @@index([method])

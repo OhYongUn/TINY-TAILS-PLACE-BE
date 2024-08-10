@@ -17,13 +17,17 @@
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
     "paths": {
       "@app/common/*": [
         "libs/common/src/*"
       ],
       "@apps/rest/*": [
         "apps/rest-api/src/*"
-      ],
+      ]
     },
     "types": [
       "node"
