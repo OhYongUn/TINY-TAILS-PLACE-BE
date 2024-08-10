@@ -4,7 +4,7 @@ module.exports = {
     project: [
       './apps/rest-api/tsconfig.app.json',
       './apps/batch/tsconfig.app.json',
-      './apps/websoket/tsconfig.app.json',
+      './apps/websocket/tsconfig.app.json',
       './libs/common/tsconfig.lib.json',
       './libs/common/tsconfig.spec.json',
     ],
