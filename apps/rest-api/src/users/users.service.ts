@@ -5,15 +5,18 @@ import {
   Logger,
   NotFoundException,
   UnauthorizedException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import * as bcryptjs from 'bcryptjs';
 import { Prisma, User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
-import { UserNotFoundException } from '@app/common/auth/authException/authExceptions';
+import {
+  AuthException,
+  UserNotFoundException,
+} from '@app/common/auth/authException/authExceptions';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '@app/common/prisma/prisma.service';
 import { CreateUserDto } from '@apps/rest/users/dto/CreateUserDto';
+import { AuthErrorCodes } from '@app/common/auth/authException/error-code';
 
 @Injectable()
 export class UsersService {
@@ -26,6 +29,7 @@ export class UsersService {
   ) {}
 
   async createUser(data: CreateUserDto): Promise<Partial<User>> {
+    console.log('createUser');
     try {
       return await this.prismaService.user.create({
         data: {
@@ -40,14 +44,20 @@ export class UsersService {
         },
       });
     } catch (err: any) {
+      this.logger.error(`User creation failed: ${err.message}`, err.stack);
+
       if (
         err instanceof PrismaClientKnownRequestError &&
         err.code === 'P2002'
       ) {
-        throw new UnprocessableEntityException('Email already exists.');
+        throw new AuthException(AuthErrorCodes.EMAIL_ALREADY_IN_USE);
       }
-      this.logger.error(`User creation failed: ${err.message}`, err.stack);
-      throw new InternalServerErrorException('User creation failed');
+
+      if (err instanceof AuthException) {
+        throw err;
+      }
+
+      throw new AuthException(AuthErrorCodes.REGISTRATION_FAILED);
     }
   }
 
@@ -56,7 +66,7 @@ export class UsersService {
     const user = await this.prismaService.user.findUnique({ where: filter });
     if (!user) {
       this.logger.warn(`사용자를 찾을 수 없음: ${JSON.stringify(filter)}`);
-      throw new UserNotFoundException(filter.email as string);
+      throw new UserNotFoundException();
     }
     return user;
   }
@@ -117,6 +127,19 @@ export class UsersService {
       throw new UnauthorizedException('User not found.');
     }
     return user;
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  private isStrongPassword(password: string): boolean {
+    return password.length >= 8; // 예시: 8자 이상
+  }
+
+  private isValidName(name: string): boolean {
+    return name.length >= 2; // 예시: 2자 이상
   }
 
   private async updateUser(

@@ -1,14 +1,10 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   HttpCode,
   HttpStatus,
-  InternalServerErrorException,
-  NotFoundException,
   Post,
   Req,
-  UnauthorizedException,
   UseFilters,
   UseGuards,
 } from '@nestjs/common';
@@ -16,33 +12,36 @@ import { AuthService } from './auth.service';
 import { LocalGuard } from '@app/common/auth/guards/local.guard';
 import { Request } from 'express';
 import { User } from '@prisma/client';
-import { ApiResponse } from '@app/common/interface/ApiResponse';
 import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
 import { AuthExceptionFilter } from '@app/common/auth/authException/authExceptionFilter';
-import {
-  PasswordWrongException,
-  UserAlreadyExistException,
-  UserNotFoundException,
-} from '@app/common/auth/authException/authExceptions';
 import { RefreshTokenDto } from '@app/common/auth/dto/refreshToken.dto';
 import { CreateUserDto } from '@apps/rest/users/dto/CreateUserDto';
 import {
   ApiBadRequestResponse,
   ApiBody,
-  ApiInternalServerErrorResponse,
   ApiOperation,
+  ApiProperty,
   ApiResponse as ApiSwaggerResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { createSuccessResponse } from '@app/common/utils/api-response.util';
 
 interface RequestWithUser extends Request {
   user: User;
 }
 
+export class LoginDto {
+  @ApiProperty()
+  email: string;
+
+  @ApiProperty()
+  password: string;
+}
+
 @ApiTags('auth')
-@UseFilters(AuthExceptionFilter)
 @Controller('auth')
+@UseFilters(AuthExceptionFilter)
 export class AuthController {
   constructor(private authService: AuthService) {}
 
@@ -61,23 +60,15 @@ export class AuthController {
   @ApiBody({ type: CreateUserDto })
   async register(
     @Body() createUserDto: CreateUserDto,
-  ): Promise<ApiResponse<void>> {
-    try {
-      await this.authService.register(createUserDto);
-      return { success: true };
-    } catch (error) {
-      if (error instanceof UserAlreadyExistException) {
-        throw error;
-      }
-      throw new UserAlreadyExistException(
-        'Registration failed. Please try again.',
-      );
-    }
+  ): Promise<ReturnType<typeof createSuccessResponse<null>>> {
+    await this.authService.register(createUserDto);
+    return createSuccessResponse(null, HttpStatus.CREATED);
   }
 
   @UseGuards(LocalGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: LoginDto })
   @ApiOperation({ summary: '로그인', description: '사용자 인증 및 토큰 발급' })
   @ApiSwaggerResponse({
     status: 200,
@@ -87,21 +78,10 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: '인증 실패' })
   async login(
     @Req() req: RequestWithUser,
-  ): Promise<ApiResponse<LoginResponseDto>> {
-    try {
-      const loginResponse = await this.authService.login(req.user);
-      return { success: true, data: loginResponse };
-    } catch (error) {
-      if (
-        error instanceof PasswordWrongException ||
-        error instanceof UserNotFoundException
-      ) {
-        throw error;
-      }
-      throw new PasswordWrongException(
-        'Login failed. Please check your credentials.',
-      );
-    }
+  ): Promise<ReturnType<typeof createSuccessResponse<LoginResponseDto>>> {
+    const loginResponse = await this.authService.login(req.user);
+    console.log('loginResponse', loginResponse);
+    return createSuccessResponse(loginResponse);
   }
 
   @Post('refresh')
@@ -113,18 +93,15 @@ export class AuthController {
   @ApiSwaggerResponse({ status: 200, description: '토큰 갱신 성공' })
   @ApiUnauthorizedResponse({ description: '유효하지 않은 리프레시 토큰' })
   @ApiBody({ type: RefreshTokenDto })
-  async refresh(
-    @Body() refreshTokenDto: RefreshTokenDto,
-  ): Promise<ApiResponse<{ accessToken: string }>> {
-    try {
-      const newAccessToken = await this.authService.refresh(refreshTokenDto);
-      return {
-        success: true,
-        data: { accessToken: newAccessToken.accessToken },
-      };
-    } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto): Promise<
+    ReturnType<
+      typeof createSuccessResponse<{
+        accessToken: string;
+      }>
+    >
+  > {
+    const newAccessToken = await this.authService.refresh(refreshTokenDto);
+    return createSuccessResponse(newAccessToken);
   }
 
   @Post('logout')
@@ -133,20 +110,11 @@ export class AuthController {
   @ApiSwaggerResponse({ status: 200, description: '로그아웃 성공' })
   @ApiBadRequestResponse({ description: '이메일 누락' })
   @ApiUnauthorizedResponse({ description: '사용자를 찾을 수 없음' })
-  @ApiInternalServerErrorResponse({ description: '로그아웃 실패' })
   @ApiBody({ schema: { properties: { email: { type: 'string' } } } })
-  async logout(@Body('email') email: string): Promise<ApiResponse<void>> {
-    if (!email) {
-      throw new BadRequestException('Email is required for logout');
-    }
-    try {
-      await this.authService.logout(email);
-      return { success: true };
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new UnauthorizedException('User not found');
-      }
-      throw new InternalServerErrorException('Logout failed');
-    }
+  async logout(
+    @Body('email') email: string,
+  ): Promise<ReturnType<typeof createSuccessResponse<null>>> {
+    await this.authService.logout(email);
+    return createSuccessResponse(null);
   }
 }

@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AccessTokenPayloadDto } from './dto/accessTokenPayload.dto';
@@ -14,17 +9,14 @@ import { User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
 import {
+  InvalidTokenException,
   PasswordWrongException,
+  UserAlreadyExistException,
   UserNotFoundException,
 } from '@app/common/auth/authException/authExceptions';
 import { UsersService } from '@apps/rest/users/users.service';
 import { CreateUserDto } from '@apps/rest/users/dto/CreateUserDto';
 import { UserResponseDto } from '@apps/rest/users/dto/UserResponseDto';
-
-const DEFAULT_ACCESS_TOKEN_SECRET = 'default_access_token_secret';
-const DEFAULT_REFRESH_TOKEN_SECRET = 'default_refresh_token_secret';
-const DEFAULT_ACCESS_TOKEN_EXPIRATION = 3600; // 1 hour
-const DEFAULT_REFRESH_TOKEN_EXPIRATION = 86400; // 24 hours
 
 @Injectable()
 export class AuthService {
@@ -41,57 +33,54 @@ export class AuthService {
   ) {
     this.accessTokenSecret = this.configService.get<string>(
       'JWT_ACCESS_TOKEN_SECRET',
-      DEFAULT_ACCESS_TOKEN_SECRET,
+      'default_access_token_secret',
     );
     this.refreshTokenSecret = this.configService.get<string>(
       'JWT_REFRESH_SECRET',
-      DEFAULT_REFRESH_TOKEN_SECRET,
+      'default_refresh_token_secret',
     );
     this.accessTokenExpiration = this.configService.get<number>(
       'JWT_ACCESS_EXPIRES',
-      DEFAULT_ACCESS_TOKEN_EXPIRATION,
+      3600,
     );
     this.refreshTokenExpiration = this.configService.get<number>(
       'JWT_REFRESH_EXPIRES',
-      DEFAULT_REFRESH_TOKEN_EXPIRATION,
+      86400,
     );
   }
 
-  async register(CreateUserDto: CreateUserDto): Promise<void> {
-    await this.usersService.createUser(CreateUserDto);
+  async register(createUserDto: CreateUserDto): Promise<void> {
+    try {
+      await this.usersService.createUser(createUserDto);
+    } catch (error) {
+      throw new UserAlreadyExistException();
+    }
   }
 
   async validateUser(email: string, password: string): Promise<User> {
     const user = await this.usersService.getUser({ email });
     if (!user) {
-      throw new UserNotFoundException(`존재하지않는 사용자입니다.`);
+      throw new UserNotFoundException();
     }
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new PasswordWrongException('비밀번호가 틀렸습니다.');
+      throw new PasswordWrongException();
     }
     return user;
   }
 
-  async getAccessToken(user: User): Promise<string> {
-    const payload: AccessTokenPayloadDto = {
-      userEmail: user.email,
-      userName: user.name,
-    };
-    return this.jwtService.sign(payload, {
-      secret: this.accessTokenSecret,
-      expiresIn: this.accessTokenExpiration,
-    });
-  }
+  async login(user: User): Promise<LoginResponseDto> {
+    console.log('11');
+    const accessToken: string = await this.getAccessToken(user);
+    const refreshToken: string = await this.getRefreshToken(user);
+    await this.usersService.setCurrentRefreshToken(user.email, refreshToken);
 
-  async getRefreshToken(user: User): Promise<string> {
-    const payload: RefreshTokenPayloadDto = {
-      userEmail: user.email,
+    const userResponseDto: UserResponseDto = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
     };
-    return this.jwtService.sign(payload, {
-      secret: this.refreshTokenSecret,
-      expiresIn: this.refreshTokenExpiration,
-    });
+    return { accessToken, refreshToken, user: userResponseDto };
   }
 
   async refresh(refreshTokenDto: RefreshTokenDto): Promise<NewAccessTokenDto> {
@@ -105,31 +94,37 @@ export class AuthService {
         refreshToken,
       );
       const accessToken = await this.getAccessToken(user);
-      return { accessToken }; // NewAccessTokenDto 형식에 맞게 반환
+      return { accessToken };
     } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new InvalidTokenException();
     }
-  }
-
-  async login(user: User): Promise<LoginResponseDto> {
-    const accessToken: string = await this.getAccessToken(user);
-    const refreshToken: string = await this.getRefreshToken(user);
-    await this.usersService.setCurrentRefreshToken(user.email, refreshToken);
-
-    const UserResponseDto: UserResponseDto = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-    };
-    const data = { accessToken, refreshToken, user: UserResponseDto };
-    console.log('data', data);
-    return data;
   }
 
   async logout(email: string): Promise<void> {
     if (!email) {
-      throw new BadRequestException('Email is required for logout');
+      throw new UserNotFoundException();
     }
     await this.usersService.removeCurrentRefreshToken(email);
+  }
+
+  private async getAccessToken(user: User): Promise<string> {
+    const payload: AccessTokenPayloadDto = {
+      userEmail: user.email,
+      userName: user.name,
+    };
+    return this.jwtService.sign(payload, {
+      secret: this.accessTokenSecret,
+      expiresIn: this.accessTokenExpiration,
+    });
+  }
+
+  private async getRefreshToken(user: User): Promise<string> {
+    const payload: RefreshTokenPayloadDto = {
+      userEmail: user.email,
+    };
+    return this.jwtService.sign(payload, {
+      secret: this.refreshTokenSecret,
+      expiresIn: this.refreshTokenExpiration,
+    });
   }
 }

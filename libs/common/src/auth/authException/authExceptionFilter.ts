@@ -1,49 +1,21 @@
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { AuthException } from './authException';
-import { ApiError } from '@app/common/interface/ApiResponse';
+import { createErrorResponse } from '@app/common/utils/api-response.util';
+import { AuthException } from '@app/common/auth/authException/authExceptions';
 
-@Catch(AuthException, HttpException)
+@Catch(AuthException)
 export class AuthExceptionFilter implements ExceptionFilter {
-  catch(exception: AuthException | HttpException, host: ArgumentsHost) {
+  catch(exception: AuthException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
 
-    let statusCode: number;
-    let message: string;
+    const status = exception.errorCode.statusCode;
+    const code = exception.name; // 예외의 이름을 코드로 사용
+    const message = exception.message;
 
-    if (exception instanceof AuthException && exception.errorCode) {
-      statusCode = exception.errorCode.statusCode;
-      message = exception.errorCode.message;
-    } else if (exception instanceof HttpException) {
-      statusCode = exception.getStatus();
-      message = exception.message;
-    } else {
-      statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-      message = 'Internal server error';
-    }
-
-    if (exception.message) {
-      message = exception.message;
-    }
-
-    const errorResponse: ApiError = {
-      success: false,
-      error: {
-        statusCode,
-        message,
-        timestamp: new Date().toISOString(),
-        path: req.url,
-      },
-    };
-
-    res.status(statusCode).json(errorResponse);
+    res.status(status).json(
+      createErrorResponse(code, message, status), // statusCode 포함
+    );
   }
 }
