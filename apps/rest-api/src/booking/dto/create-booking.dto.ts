@@ -78,5 +78,5 @@ export class CreateBookingDto {
 
   @ApiPropertyOptional({ description: '특별 요청 사항' })
   @IsString()
-  specialRequests?: string;
+  request?: string;
 }
