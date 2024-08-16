@@ -1,24 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/common/prisma/prisma.service';
 import { CreateBookingDto } from '@apps/rest/booking/dto/create-booking.dto';
-import {
-  BookingStatus,
-  PaymentMethod,
-  PaymentStatus,
-  PaymentType,
-  Prisma,
-} from '@prisma/client';
+import { BookingStatus, PaymentStatus, Prisma } from '@prisma/client';
 import {
   BookingConflictException,
   BookingException,
+  BookingNotFoundException,
   InsufficientPaymentException,
   InvalidBookingDateException,
+  InvalidPaymentAmountException,
+  PaymentAlreadyCompletedException,
+  PaymentNotFoundException,
 } from '@apps/rest/booking/exceptions/booking-exceptions';
 import { ErrorCode } from '@apps/rest/room/exceptions/error-codes';
+import { PaymentService } from '@apps/rest/payment/payment.service';
+import { ConfirmPaymentDto } from '@apps/rest/payment/dto/confirm-payment.dto';
 
 @Injectable()
 export class BookingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private paymentService: PaymentService,
+  ) {}
 
   async createBookingAndInitiatePayment(createBookingDto: CreateBookingDto) {
     try {
@@ -33,7 +36,7 @@ export class BookingService {
         basePrice,
         additionalFees,
         totalPrice,
-        specialRequests,
+        request,
         status,
       } = createBookingDto;
 
@@ -60,37 +63,43 @@ export class BookingService {
             roomDetailId,
             checkInDate,
             checkOutDate,
-            requestedLateCheckout,
-            requestedEarlyCheckin,
-            petCount,
             basePrice,
-            additionalFees,
             totalPrice,
-            specialRequests,
+            additionalFees,
             status: status || BookingStatus.PENDING,
+            bookingDetails: {
+              create: {
+                petCount,
+                request,
+                requestedLateCheckout,
+                requestedEarlyCheckin,
+              },
+            },
+          },
+          include: {
+            bookingDetails: true,
           },
         });
 
         // Payment 생성
-        const payment = await prisma.payment.create({
+        const { basePricePayment, additionalFeesPayment } =
+          await this.paymentService.processPayment(
+            prisma, // 트랜잭션 내의 prisma 인스턴스를 전달
+            booking.id,
+            basePrice,
+            additionalFees,
+          );
+        await prisma.bookingStatusHistory.create({
           data: {
-            amount: totalPrice, // basePrice 대신 totalPrice 사용
-            status: PaymentStatus.PENDING, // 열거형 사용 권장
-            method: PaymentMethod.CREDIT_CARD, // 열거형 사용 권장
-            type: PaymentType.INITIAL, // 열거형 사용 권장
             bookingId: booking.id,
+            status: BookingStatus.PENDING,
+            reason: 'Initial booking',
           },
         });
-        // RoomAvailability 업데이트
-        await this.updateRoomAvailability(
-          prisma,
-          roomDetailId,
-          checkInDate,
-          checkOutDate,
-          -1,
-        );
-
-        return { booking, payment, amountToPay: totalPrice }; // basePrice 대신 totalPrice 반환
+        console.log('boking', booking);
+        console.log('basePricePayment', basePricePayment);
+        console.log('additionalFeesPayment', additionalFeesPayment);
+        return { booking, payment: basePricePayment, additionalFeesPayment };
       });
     } catch (error) {
       if (!(error instanceof BookingException)) {
@@ -101,6 +110,93 @@ export class BookingService {
       }
       throw error;
     }
+  }
+
+  async confirmPayment(confirmPaymentDto: ConfirmPaymentDto) {
+    const { paymentId, amount, transactionId, bookingId } = confirmPaymentDto;
+
+    return this.prisma.$transaction(async (prisma) => {
+      const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          roomDetail: true, // roomDetail을 포함해서 가져옴
+        },
+      });
+      if (!booking) {
+        throw new BookingNotFoundException();
+      }
+      if (booking.basePrice !== amount) {
+        throw new InvalidPaymentAmountException();
+      }
+      const { checkInDate, checkOutDate, roomDetailId } = booking;
+
+      const isAvailable = await this.checkRoomAvailability(
+        prisma,
+        roomDetailId,
+        checkInDate,
+        checkOutDate,
+      );
+      if (!isAvailable) {
+        throw new BookingConflictException();
+      }
+      const payment = await prisma.payment.findUnique({
+        where: { id: paymentId },
+      });
+
+      if (!payment) {
+        throw new PaymentNotFoundException();
+      }
+
+      if (payment.status === PaymentStatus.COMPLETED) {
+        throw new PaymentAlreadyCompletedException();
+      }
+      // 3. Payment 업데이트
+      const updatePayment = await prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: PaymentStatus.COMPLETED,
+          transactionId,
+        },
+      });
+
+      if (!updatePayment) {
+        throw new Error('Payment not found');
+      }
+
+      // 4. Booking 상태 업데이트
+      const updatedBooking = await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.CONFIRMED,
+        },
+        include: {
+          roomDetail: true,
+        },
+      });
+
+      //  BookingStatusHistory 추가
+      await prisma.bookingStatusHistory.create({
+        data: {
+          bookingId: bookingId,
+          status: BookingStatus.CONFIRMED,
+          reason: 'Payment confirmed',
+        },
+      });
+
+      // RoomAvailability 업데이트 (필요한 경우)
+      await this.updateRoomAvailability(
+        prisma,
+        roomDetailId,
+        checkInDate,
+        checkOutDate,
+        -1,
+      );
+      return {
+        message: 'Payment confirmed and booking completed',
+        booking: updatedBooking,
+        payment,
+      };
+    });
   }
 
   // 가용성 체크 메서드

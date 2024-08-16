@@ -1,9 +1,47 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@app/common/prisma/prisma.service';
+import {
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+  Prisma,
+} from '@prisma/client';
 
 @Injectable()
 export class PaymentService {
   constructor(private prisma: PrismaService) {}
+
+  async processPayment(
+    prisma: Prisma.TransactionClient,
+    bookingId: string,
+    basePrice: number,
+    additionalFees: number,
+  ) {
+    const basePricePayment = await prisma.payment.create({
+      data: {
+        amount: basePrice,
+        status: PaymentStatus.PENDING,
+        method: PaymentMethod.CREDIT_CARD,
+        type: PaymentType.INITIAL,
+        bookingId: bookingId,
+      },
+    });
+
+    let additionalFeesPayment = null;
+    if (additionalFees > 0) {
+      additionalFeesPayment = await prisma.payment.create({
+        data: {
+          amount: additionalFees,
+          status: PaymentStatus.PENDING,
+          method: PaymentMethod.CREDIT_CARD,
+          type: PaymentType.ADDITIONAL,
+          bookingId: bookingId,
+        },
+      });
+    }
+
+    return { basePricePayment, additionalFeesPayment };
+  }
 
   /* async processPayment(bookingId: number, paymentMethod: string) {
      return this.prisma.$transaction(async (prisma) => {

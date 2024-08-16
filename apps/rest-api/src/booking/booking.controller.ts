@@ -1,11 +1,12 @@
 // booking.controller.ts
 import { Body, Controller, Post, UseFilters } from '@nestjs/common';
-import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
 import { InitiateBookingResponseDto } from '@apps/rest/booking/dto/Initiate-booking-response.dto';
 import { CreateBookingDto } from '@apps/rest/booking/dto/create-booking.dto';
 import { BookingExceptionFilter } from '@apps/rest/booking/exceptions/booking-exception.filter';
 import { createSuccessResponse } from '@app/common/utils/api-response.util';
+import { ConfirmPaymentDto } from '@apps/rest/payment/dto/confirm-payment.dto';
 
 @ApiTags('Booking')
 @Controller('bookings')
@@ -26,12 +27,19 @@ export class BookingController {
       );
     return createSuccessResponse(
       {
-        bookingNum: result.booking.bookingNum,
+        bookingNum: result.booking.id,
         paymentId: result.payment.id,
-        totalAmount: result.booking.totalPrice,
+        totalAmount: result.booking.basePrice,
       },
       201,
     );
+  }
+
+  @Post('confirm-payment')
+  @ApiOperation({ summary: '결제 확인 및 예약 완료' })
+  @ApiResponse({ status: 200, description: '결제 확인 성공' })
+  async confirmPayment(@Body() confirmPaymentDto: ConfirmPaymentDto) {
+    return this.bookingService.confirmPayment(confirmPaymentDto);
   }
 }
 
