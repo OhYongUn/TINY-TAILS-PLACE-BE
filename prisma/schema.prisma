@@ -1,5 +1,5 @@
 // 1. Prisma 마이그레이션 생성 및 적용, Prisma 클라이언트 생성:
-// npx prisma migrate dev --name add_new_book_payment_process
+// npx prisma migrate dev --name chage_payment_column_type
 //
 // 2. (선택적) 프로덕션 환경에서 마이그레이션 적용:
 // npx prisma migrate deploy
@@ -230,7 +230,7 @@ model OrderItem {
 }
 
 model Payment {
-  id            Int           @id @default(autoincrement()) @map("id")
+  id            String        @id @default(uuid()) @map("id")
   amount        Float         @map("amount")
   status        PaymentStatus @map("status")
   method        PaymentMethod @map("method")
