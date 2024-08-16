@@ -57,7 +57,7 @@ model RoomDetail {
   roomNumber      String             @unique @map("room_number")
   currentCheckIn  DateTime?          @map("current_check_in")
   currentCheckOut DateTime?          @map("current_check_out")
-  status          RoomStatus         @map("status")
+  status          RoomStatus         @default(AVAILABLE)
   lastCleaned     DateTime?          @map("last_cleaned")
   nextCleaning    DateTime?          @map("next_cleaning")
   createdAt       DateTime           @default(now()) @map("created_at")
@@ -100,33 +100,58 @@ model RoomPrice {
 }
 
 model Booking {
-  id                    Int           @id @default(autoincrement()) @map("id")
-  bookingNum            String        @unique @default(uuid()) @map("booking_num")
-  userId                Int           @map("user_id")
-  roomDetailId          Int           @map("room_detail_id")
-  checkInDate           DateTime      @map("check_in_date")
-  checkOutDate          DateTime      @map("check_out_date")
-  requestedLateCheckout Boolean       @default(false) @map("requested_late_checkout")
-  requestedEarlyCheckin Boolean       @default(false) @map("requested_early_checkin")
-  actualLateCheckout    Boolean       @default(false) @map("actual_late_checkout")
-  actualEarlyCheckin    Boolean       @default(false) @map("actual_early_checkin")
-  petCount              Int           @map("pet_count")
-  basePrice             Float         @map("base_price")
-  additionalFees        Float         @default(0) @map("additional_fees")
-  totalPrice            Float         @map("total_price")
-  status                BookingStatus @map("status")
-  specialRequests       String?       @map("special_requests")
-  createdAt             DateTime      @default(now()) @map("created_at")
-  updatedAt             DateTime      @updatedAt @map("updated_at")
-  roomDetail            RoomDetail    @relation(fields: [roomDetailId], references: [id])
-  user                  User          @relation(fields: [userId], references: [id])
-  payments              Payment?
+  id               String                 @id @default(uuid()) @map("id")
+  userId           Int                    @map("user_id")
+  roomDetailId     Int                    @map("room_detail_id")
+  checkInDate      DateTime               @map("check_in_date")
+  checkOutDate     DateTime               @map("check_out_date")
+  basePrice        Float                  @map("base_price")
+  totalPrice       Float                  @map("total_price")
+  status           BookingStatus          @map("status")
+  cancellationDate DateTime?              @map("cancellation_date")
+  cancellationFee  Float?                 @map("cancellation_fee")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+  user             User                   @relation(fields: [userId], references: [id])
+  roomDetail       RoomDetail             @relation(fields: [roomDetailId], references: [id])
+  bookingDetails   BookingDetail?
+  statusHistories  BookingStatusHistory[]
+  payments         Payment[]
+  additionalFees   Float                  @default(0) @map("additional_fees")
+  refunds          Refund[]
+  AdditionalFee    AdditionalFee[]
 
   @@index([userId])
   @@index([roomDetailId])
   @@index([checkInDate, checkOutDate])
   @@index([status])
   @@map("BOOKINGS")
+}
+
+model BookingDetail {
+  id                    Int     @id @default(autoincrement())
+  bookingId             String  @unique @map("booking_id")
+  petCount              Int     @map("pet_count")
+  request               String? @default("") @map("request")
+  requestedLateCheckout Boolean @default(false) @map("requested_late_checkout")
+  requestedEarlyCheckin Boolean @default(false) @map("requested_early_checkin")
+  actualLateCheckout    Boolean @default(false) @map("actual_late_checkout")
+  actualEarlyCheckin    Boolean @default(false) @map("actual_early_checkin")
+  booking               Booking @relation(fields: [bookingId], references: [id])
+
+  @@map("BOOKING_DETAILS")
+}
+
+model BookingStatusHistory {
+  id        Int           @id @default(autoincrement())
+  bookingId String        @map("bookin_id")
+  status    BookingStatus
+  reason    String?
+  createdAt DateTime      @default(now()) @map("created_at")
+  booking   Booking       @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+  @@map("BOOKING_STATUS_HISTORIES")
 }
 
 model CleaningLog {
@@ -175,7 +200,7 @@ model Product {
 }
 
 model Order {
-  id          Int         @id @default(autoincrement()) @map("id")
+  id          String      @id @default(uuid()) @map("id")
   userId      Int         @map("user_id")
   totalAmount Float       @map("total_amount")
   status      String      @map("status")
@@ -192,7 +217,7 @@ model Order {
 
 model OrderItem {
   id        Int     @id @default(autoincrement()) @map("id")
-  orderId   Int     @map("order_id")
+  orderId   String  @map("order_id")
   productId Int     @map("product_id")
   quantity  Int     @map("quantity")
   price     Float   @map("price")
@@ -210,8 +235,8 @@ model Payment {
   status        PaymentStatus @map("status")
   method        PaymentMethod @map("method")
   type          PaymentType   @map("type")
-  bookingId     Int?          @unique @map("booking_id")
-  orderId       Int?          @unique @map("order_id")
+  bookingId     String?       @map("booking_id")
+  orderId       String?       @unique @map("order_id")
   transactionId String?       @map("transaction_id")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
@@ -221,22 +246,47 @@ model Payment {
   @@index([status])
   @@index([method])
   @@index([type])
+  @@index([bookingId])
+  @@index([orderId])
   @@map("PAYMENTS")
 }
 
-enum RoomStatus {
-  AVAILABLE
-  OCCUPIED
-  MAINTENANCE
-  CLEANING
+model AdditionalFee {
+  id          Int      @id @default(autoincrement())
+  bookingId   String   @map("booking_id")
+  feeType     FeeType  @map("fee_type")
+  amount      Float
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+  @@map("ADDITIONAL_FEES")
 }
 
-enum PriceType {
-  BASE
-  SEASONAL
-  WEEKEND
-  HOLIDAY
-  SPECIAL_EVENT
+model CancellationPolicy {
+  id                Int      @id @default(autoincrement())
+  daysBeforeCheckin Int      @map("days_before_checkin")
+  feePercentage     Float    @map("fee_percentage")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("CANCELLATION_POLICIES")
+}
+
+model Refund {
+  id        Int          @id @default(autoincrement())
+  bookingId String       @map("booking_id")
+  amount    Float        @map("amount")
+  status    RefundStatus @map("status")
+  reason    String       @map("reason")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  booking   Booking      @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+  @@map("REFUNDS")
 }
 
 enum BookingStatus {
@@ -252,19 +302,45 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
-  PARTIALLY_REFUNDED
 }
 
 enum PaymentMethod {
   CREDIT_CARD
   DEBIT_CARD
   BANK_TRANSFER
-  PAYPAL
   CASH
 }
 
 enum PaymentType {
   INITIAL
   ADDITIONAL
-  REFUND
+}
+
+enum FeeType {
+  LATE_CHECKOUT
+  EARLY_CHECKIN
+  MINIBAR
+  ROOM_SERVICE
+  OTHER
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+}
+
+enum PriceType {
+  BASE
+  SEASONAL
+  WEEKEND
+  HOLIDAY
+  SPECIAL_EVENT
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSED
+  FAILED
 }
