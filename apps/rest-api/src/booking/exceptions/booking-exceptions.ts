@@ -42,3 +42,21 @@ export class BookingCancelledException extends BookingException {
     super(BookingErrorCodes.BOOKING_CANCELLED);
   }
 }
+
+export class PaymentNotFoundException extends BookingException {
+  constructor() {
+    super(BookingErrorCodes.PAYMENT_NOT_FOUND);
+  }
+}
+
+export class PaymentAlreadyCompletedException extends BookingException {
+  constructor() {
+    super(BookingErrorCodes.PAYMENT_ALREADY_COMPLETED);
+  }
+}
+
+export class InvalidPaymentAmountException extends BookingException {
+  constructor() {
+    super(BookingErrorCodes.INVALID_PAYMENT_AMOUNT);
+  }
+}

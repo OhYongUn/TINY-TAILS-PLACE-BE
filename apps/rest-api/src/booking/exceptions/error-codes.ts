@@ -32,4 +32,19 @@ export const BookingErrorCodes = {
     400,
     '이미 취소된 예약입니다',
   ),
+  PAYMENT_NOT_FOUND: new ErrorCode(
+    'PAYMENT_NOT_FOUND',
+    404,
+    '결제를 찾을 수 없습니다',
+  ),
+  PAYMENT_ALREADY_COMPLETED: new ErrorCode(
+    'PAYMENT_ALREADY_COMPLETED',
+    400,
+    '결제가 이미 완료되었습니다',
+  ),
+  INVALID_PAYMENT_AMOUNT: new ErrorCode(
+    'INVALID_PAYMENT_AMOUNT',
+    400,
+    '결제 금액이 올바르지 않습니다',
+  ),
 };
