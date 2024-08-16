@@ -14,9 +14,18 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingStatus } from '@prisma/client';
 
 export class CreateBookingDto {
-  @ApiProperty({ description: '사용자 ID' })
+  @ApiProperty({ description: '사용자 고유 ID' })
   @IsInt()
   userId: number;
+  @ApiProperty({ description: '사용자 이름' })
+  @IsString()
+  userName: string;
+  @ApiProperty({ description: '사용자 Email' })
+  @IsString()
+  userEmail: string;
+  @ApiProperty({ description: '사용자 핸드폰 번호' })
+  @IsString()
+  userPhone: string;
 
   @ApiProperty({ description: '객실 ID' })
   @IsInt()
