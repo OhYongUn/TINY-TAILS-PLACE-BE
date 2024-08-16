@@ -192,7 +192,6 @@ export class BookingService {
         -1,
       );
       return {
-        message: 'Payment confirmed and booking completed',
         booking: updatedBooking,
         payment,
       };

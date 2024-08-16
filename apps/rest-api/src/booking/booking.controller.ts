@@ -27,19 +27,26 @@ export class BookingController {
       );
     return createSuccessResponse(
       {
-        bookingNum: result.booking.id,
+        bookingId: result.booking.id,
         paymentId: result.payment.id,
-        totalAmount: result.booking.basePrice,
+        amount: result.booking.basePrice,
       },
       201,
     );
   }
 
-  @Post('confirm-payment')
+  @Post('confirm')
   @ApiOperation({ summary: '결제 확인 및 예약 완료' })
   @ApiResponse({ status: 200, description: '결제 확인 성공' })
   async confirmPayment(@Body() confirmPaymentDto: ConfirmPaymentDto) {
-    return this.bookingService.confirmPayment(confirmPaymentDto);
+    const result = await this.bookingService.confirmPayment(confirmPaymentDto); // await 추가
+    return createSuccessResponse(
+      {
+        bookingId: result.booking.id,
+        paymentId: result.payment.id,
+      },
+      201,
+    );
   }
 }
 
