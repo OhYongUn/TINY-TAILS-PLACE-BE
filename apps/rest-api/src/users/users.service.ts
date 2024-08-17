@@ -17,6 +17,14 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '@app/common/prisma/prisma.service';
 import { CreateUserDto } from '@apps/rest/users/dto/CreateUserDto';
 import { AuthErrorCodes } from '@app/common/auth/authException/error-code';
+import { UpdatePasswordDto } from '@apps/rest/users/dto/update-password.dto';
+import { UpdateUserProfileDto } from '@apps/rest/users/dto/update-user-profile.dto';
+import {
+  InvalidPasswordException,
+  NotStrongPassWord,
+  UserException,
+} from '@apps/rest/users/exceptions/user-exceptions';
+import { ErrorCode } from '@apps/rest/room/exceptions/error-codes';
 
 @Injectable()
 export class UsersService {
@@ -28,8 +36,82 @@ export class UsersService {
     private readonly configService: ConfigService,
   ) {}
 
+  async updateUserProfile(
+    userEmail: string,
+    updateUserProfileDto: UpdateUserProfileDto,
+  ) {
+    // 이메일 변경 시 중복 체크
+    const existingUser = await this.prismaService.user.findUnique({
+      where: { email: userEmail },
+    });
+
+    if (!existingUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.prismaService.user.update({
+      where: { email: userEmail },
+      data: updateUserProfileDto,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        // 필요한 다른 필드들...
+      },
+    });
+  }
+
+  async changePassword(
+    userEmail: string,
+    updatePasswordDto: UpdatePasswordDto,
+  ): Promise<void> {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { email: userEmail },
+      });
+      if (!user) {
+        throw new UserNotFoundException();
+      }
+
+      const isPasswordValid = await bcryptjs.compare(
+        updatePasswordDto.currentPassword,
+        user.password,
+      );
+
+      if (!isPasswordValid) {
+        throw new InvalidPasswordException();
+      }
+
+      if (!this.isStrongPassword(updatePasswordDto.newPassword)) {
+        throw new NotStrongPassWord();
+      }
+
+      const hashedNewPassword = await bcryptjs.hash(
+        updatePasswordDto.newPassword,
+        10,
+      );
+
+      await this.prismaService.user.update({
+        where: { email: userEmail },
+        data: { password: hashedNewPassword },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to change password: ${error.message}`,
+        error.stack,
+      );
+      if (!(error instanceof UserException)) {
+        throw new UserException(
+          new ErrorCode('INTERNAL_SERVER_ERROR', 500, 'Internal Server Error'),
+          'An unexpected error occurred',
+        );
+      }
+      throw error;
+    }
+  }
+
   async createUser(data: CreateUserDto): Promise<Partial<User>> {
-    console.log('createUser');
     try {
       return await this.prismaService.user.create({
         data: {
