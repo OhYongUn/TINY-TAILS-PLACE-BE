@@ -1,4 +1,11 @@
-import { Body, Controller, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Put,
+  Req,
+  UseFilters,
+  UseGuards,
+} from '@nestjs/common';
 import { UpdatePasswordDto } from '@apps/rest/users/dto/update-password.dto';
 import { UsersService } from '@apps/rest/users/users.service';
 import { AccessTokenGuard } from '@app/common/auth/guards/accessToken.guard';
@@ -7,6 +14,7 @@ import { Request } from 'express';
 import { User } from '@prisma/client';
 import { ApiTags } from '@nestjs/swagger';
 import { createSuccessResponse } from '@app/common/utils/api-response.util';
+import { UserExceptionFilter } from '@apps/rest/users/exceptions/user-exception.filter';
 
 interface RequestWithUser extends Request {
   user: User;
@@ -14,6 +22,7 @@ interface RequestWithUser extends Request {
 
 @ApiTags('users')
 @Controller('users')
+@UseFilters(UserExceptionFilter)
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
@@ -36,12 +45,20 @@ export class UsersController {
     );
   }
 
+  @UseGuards(AccessTokenGuard)
   @Put('change-password')
   async changePassword(
     @Req() req: RequestWithUser,
     @Body() changePasswordDto: UpdatePasswordDto,
   ) {
     const userEmail = req.user.email; // JWT payload에서 사용자 ID 추출
-    return this.usersService.changePassword(userEmail, changePasswordDto);
+    await this.usersService.changePassword(userEmail, changePasswordDto);
+
+    return createSuccessResponse(
+      {
+        user: req.user,
+      },
+      200,
+    );
   }
 }
