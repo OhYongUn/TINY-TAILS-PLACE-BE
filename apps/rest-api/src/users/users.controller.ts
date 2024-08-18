@@ -6,6 +6,7 @@ import { UpdateUserProfileDto } from '@apps/rest/users/dto/update-user-profile.d
 import { Request } from 'express';
 import { User } from '@prisma/client';
 import { ApiTags } from '@nestjs/swagger';
+import { createSuccessResponse } from '@app/common/utils/api-response.util';
 
 interface RequestWithUser extends Request {
   user: User;
@@ -23,7 +24,16 @@ export class UsersController {
     @Body() updateUserProfileDto: UpdateUserProfileDto,
   ) {
     const userEmail = req.user.email; // JWT payload에서 사용자 ID 추출
-    return this.usersService.updateUserProfile(userEmail, updateUserProfileDto);
+    const result = this.usersService.updateUserProfile(
+      userEmail,
+      updateUserProfileDto,
+    );
+    return createSuccessResponse(
+      {
+        user: result,
+      },
+      200,
+    );
   }
 
   @Put('change-password')

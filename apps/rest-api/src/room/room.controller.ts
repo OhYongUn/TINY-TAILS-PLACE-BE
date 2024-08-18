@@ -21,8 +21,8 @@ export class RoomController {
     type: AvailableRoomClassDto,
     isArray: true,
   })
-  @ApiQuery({ name: 'checkInDate', required: true, type: Date })
-  @ApiQuery({ name: 'checkOutDate', required: true, type: Date })
+  @ApiQuery({ name: 'checkInDate', required: true, type: String })
+  @ApiQuery({ name: 'checkOutDate', required: true, type: String })
   async getAvailableRooms(@Query() query: SearchRoomsDto) {
     const result = await this.roomService.findAvailableRooms(query);
     return createSuccessResponse(result);
