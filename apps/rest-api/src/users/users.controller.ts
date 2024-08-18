@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Put,
-  Req,
-  UseFilters,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Put, UseFilters, UseGuards } from '@nestjs/common';
 import { UpdatePasswordDto } from '@apps/rest/users/dto/update-password.dto';
 import { UsersService } from '@apps/rest/users/users.service';
 import { AccessTokenGuard } from '@app/common/auth/guards/accessToken.guard';
@@ -15,6 +8,7 @@ import { User } from '@prisma/client';
 import { ApiTags } from '@nestjs/swagger';
 import { createSuccessResponse } from '@app/common/utils/api-response.util';
 import { UserExceptionFilter } from '@apps/rest/users/exceptions/user-exception.filter';
+import { GetUser } from '@app/common/auth/decorators/get-user.decorator';
 
 interface RequestWithUser extends Request {
   user: User;
@@ -29,10 +23,10 @@ export class UsersController {
   @UseGuards(AccessTokenGuard)
   @Put('profile')
   async updateProfile(
-    @Req() req: RequestWithUser,
+    @GetUser() user: User,
     @Body() updateUserProfileDto: UpdateUserProfileDto,
   ) {
-    const userEmail = req.user.email; // JWT payload에서 사용자 ID 추출
+    const userEmail = user.email; // JWT payload에서 사용자 ID 추출
     const result = this.usersService.updateUserProfile(
       userEmail,
       updateUserProfileDto,
@@ -48,15 +42,15 @@ export class UsersController {
   @UseGuards(AccessTokenGuard)
   @Put('change-password')
   async changePassword(
-    @Req() req: RequestWithUser,
+    @GetUser() user: User,
     @Body() changePasswordDto: UpdatePasswordDto,
   ) {
-    const userEmail = req.user.email; // JWT payload에서 사용자 ID 추출
+    const userEmail = user.email; // JWT payload에서 사용자 ID 추출
     await this.usersService.changePassword(userEmail, changePasswordDto);
 
     return createSuccessResponse(
       {
-        user: req.user,
+        user: user,
       },
       200,
     );
