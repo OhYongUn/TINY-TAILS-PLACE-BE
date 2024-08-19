@@ -290,13 +290,16 @@ model Refund {
 }
 
 model Admin {
-  id                     Int         @id @default(autoincrement()) @map("id")
+  id                     String      @id @default(uuid()) @map("id")
   name                   String      @map("name")
   email                  String      @unique @map("email")
   phone                  String      @default("") @map("phone")
   password               String      @map("password")
+  failedLoginAttempts    Int         @default(0) @map("failed_login_attempts")
+  isActive               Boolean     @default(true) @map("is_active")
   createdAt              DateTime    @default(now()) @map("created_at")
-  updatedAt              DateTime?   @updatedAt @map("updated_at")
+  updatedAt              DateTime    @updatedAt @map("updated_at")
+  lastLoginAt            DateTime?   @map("last_login_at")
   currentRefreshToken    String?     @map("current_refresh_token")
   currentRefreshTokenExp DateTime?   @map("current_refresh_token_exp")
   AdminRole              AdminRole[]
@@ -308,10 +311,11 @@ model Admin {
 model Role {
   id              Int              @id @default(autoincrement())
   name            String           @unique
+  description     String?
   adminRoles      AdminRole[]
   rolePermissions RolePermission[]
   createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime?        @updatedAt @map("updated_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
 
   @@map("ROLES")
 }
@@ -320,19 +324,24 @@ model Permission {
   id              Int              @id @default(autoincrement())
   name            String           @unique
   description     String?
+  resource        String // 예: 'reservation', 'customer', 'employee'
+  action          String // 예: 'read', 'create', 'update', 'delete'
   rolePermissions RolePermission[]
   createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime?        @updatedAt @map("updated_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
 
+  @@unique([resource, action])
   @@map("PERMISSIONS")
 }
 
 model AdminRole {
-  id      Int   @id @default(autoincrement())
-  adminId Int   @map("admin_id")
-  roleId  Int
-  admin   Admin @relation(fields: [adminId], references: [id])
-  role    Role  @relation(fields: [roleId], references: [id])
+  id        Int      @id @default(autoincrement())
+  adminId   String   @map("admin_id")
+  roleId    Int      @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  admin     Admin    @relation(fields: [adminId], references: [id])
+  role      Role     @relation(fields: [roleId], references: [id])
 
   @@unique([adminId, roleId])
   @@map("ADMIN_ROLES")
@@ -342,9 +351,10 @@ model RolePermission {
   id           Int        @id @default(autoincrement())
   roleId       Int        @map("role_id")
   permissionId Int        @map("permission_id")
-  level        Int // 권한 레벨 (예: 1, 2, 3 등)
   role         Role       @relation(fields: [roleId], references: [id])
   permission   Permission @relation(fields: [permissionId], references: [id])
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
   @@unique([roleId, permissionId])
   @@map("ROLE_PERMISSIONS")
