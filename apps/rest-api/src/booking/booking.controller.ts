@@ -1,18 +1,38 @@
 // booking.controller.ts
-import { Body, Controller, Post, UseFilters } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {Body, Controller, Get, Param, Post, Query, UseFilters, UseGuards} from '@nestjs/common';
+import {ApiOperation, ApiParam, ApiResponse, ApiTags} from '@nestjs/swagger';
 import { BookingService } from './booking.service';
 import { InitiateBookingResponseDto } from '@apps/rest/booking/dto/Initiate-booking-response.dto';
 import { CreateBookingDto } from '@apps/rest/booking/dto/create-booking.dto';
 import { BookingExceptionFilter } from '@apps/rest/booking/exceptions/booking-exception.filter';
 import { createSuccessResponse } from '@app/common/utils/api-response.util';
 import { ConfirmPaymentDto } from '@apps/rest/payment/dto/confirm-payment.dto';
+import {BookingQueryDto} from "@apps/rest/booking/dto/booking-query.dto";
 
 @ApiTags('Booking')
 @Controller('bookings')
 @UseFilters(BookingExceptionFilter)
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
+
+
+
+  @Get(':userId')
+  @ApiOperation({ summary: '사용자에 대한 예약 조회' })
+  @ApiParam({ name: 'userId', type: 'number', description: 'User ID' })
+  async getBookings(
+      @Param('userId') userId: number,
+      @Query() query: BookingQueryDto
+  ) {
+
+    const result = await this.bookingService.getBookings(userId, query);
+    return createSuccessResponse(
+        {
+          bookings: result
+        },
+        200
+    );
+  }
 
   @Post()
   @ApiResponse({
