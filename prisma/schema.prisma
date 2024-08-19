@@ -1,5 +1,8 @@
+// SHOW TIMEZON
+// ALTER DATABASE postgres SET timezone TO 'Asia/Seoul';
+// SET timezone TO 'Asia/Seoul';
 // 1. Prisma 마이그레이션 생성 및 적용, Prisma 클라이언트 생성:
-// npx prisma migrate dev --name CancellationPolicy_change_column
+// npx prisma migrate dev --name admin_role_add
 //
 // 2. (선택적) 프로덕션 환경에서 마이그레이션 적용:
 // npx prisma migrate deploy
@@ -24,10 +27,10 @@ model User {
   email                  String    @unique @map("email")
   phone                  String    @default("") @map("phone")
   password               String    @map("password")
-  createdAt              DateTime  @default(now()) @map("created_at")
-  updatedAt              DateTime  @updatedAt @map("updated_at")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamp
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamp
   currentRefreshToken    String?   @map("current_refresh_token")
-  currentRefreshTokenExp DateTime? @map("current_refresh_token_exp")
+  currentRefreshTokenExp DateTime? @map("current_refresh_token_exp") @db.Timestamp
   bookings               Booking[]
   orders                 Order[]
 
@@ -43,8 +46,8 @@ model Room {
   capacity    Int          @map("capacity")
   size        Float        @map("size")
   imageUrls   String[]     @map("image_urls")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamp
   roomDetails RoomDetail[]
   prices      RoomPrice[]
 
@@ -55,13 +58,13 @@ model RoomDetail {
   id              Int                @id @default(autoincrement()) @map("id")
   roomId          Int                @map("room_id")
   roomNumber      String             @unique @map("room_number")
-  currentCheckIn  DateTime?          @map("current_check_in")
-  currentCheckOut DateTime?          @map("current_check_out")
+  currentCheckIn  DateTime?          @map("current_check_in") @db.Timestamp
+  currentCheckOut DateTime?          @map("current_check_out") @db.Timestamp
   status          RoomStatus         @default(AVAILABLE)
-  lastCleaned     DateTime?          @map("last_cleaned")
-  nextCleaning    DateTime?          @map("next_cleaning")
-  createdAt       DateTime           @default(now()) @map("created_at")
-  updatedAt       DateTime           @updatedAt @map("updated_at")
+  lastCleaned     DateTime?          @map("last_cleaned") @db.Timestamp
+  nextCleaning    DateTime?          @map("next_cleaning") @db.Timestamp
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamp
   bookings        Booking[]
   cleaningLogs    CleaningLog[]
   maintenanceLogs MaintenanceLog[]
@@ -76,7 +79,7 @@ model RoomDetail {
 model RoomAvailability {
   id             Int        @id @default(autoincrement()) @map("id")
   roomDetailId   Int        @map("room_detail_id")
-  date           DateTime   @map("date")
+  date           DateTime   @map("date") @db.Timestamp
   availableCount Int        @map("available_count")
   roomDetail     RoomDetail @relation(fields: [roomDetailId], references: [id])
 
@@ -88,8 +91,8 @@ model RoomAvailability {
 model RoomPrice {
   id        Int       @id @default(autoincrement()) @map("id")
   roomId    Int       @map("room_id")
-  startDate DateTime  @map("start_date")
-  endDate   DateTime  @map("end_date")
+  startDate DateTime  @map("start_date") @db.Timestamp
+  endDate   DateTime  @map("end_date") @db.Timestamp
   price     Float     @map("price")
   type      PriceType @map("type")
   room      Room      @relation(fields: [roomId], references: [id])
@@ -103,15 +106,15 @@ model Booking {
   id               String                 @id @default(uuid()) @map("id")
   userId           Int                    @map("user_id")
   roomDetailId     Int                    @map("room_detail_id")
-  checkInDate      DateTime               @map("check_in_date")
-  checkOutDate     DateTime               @map("check_out_date")
+  checkInDate      DateTime               @map("check_in_date") @db.Timestamp
+  checkOutDate     DateTime               @map("check_out_date") @db.Timestamp
   basePrice        Float                  @map("base_price")
   totalPrice       Float                  @map("total_price")
   status           BookingStatus          @map("status")
-  cancellationDate DateTime?              @map("cancellation_date")
+  cancellationDate DateTime?              @map("cancellation_date") @db.Timestamp
   cancellationFee  Float?                 @map("cancellation_fee")
-  createdAt        DateTime               @default(now()) @map("created_at")
-  updatedAt        DateTime               @updatedAt @map("updated_at")
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamp
+  updatedAt        DateTime               @updatedAt @map("updated_at") @db.Timestamp
   user             User                   @relation(fields: [userId], references: [id])
   roomDetail       RoomDetail             @relation(fields: [roomDetailId], references: [id])
   bookingDetails   BookingDetail?
@@ -147,7 +150,7 @@ model BookingStatusHistory {
   bookingId String        @map("bookin_id")
   status    BookingStatus
   reason    String?
-  createdAt DateTime      @default(now()) @map("created_at")
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamp
   booking   Booking       @relation(fields: [bookingId], references: [id])
 
   @@index([bookingId])
@@ -157,7 +160,7 @@ model BookingStatusHistory {
 model CleaningLog {
   id           Int        @id @default(autoincrement()) @map("id")
   roomDetailId Int        @map("room_detail_id")
-  cleanedAt    DateTime   @map("cleaned_at")
+  cleanedAt    DateTime   @map("cleaned_at") @db.Timestamp
   cleanedBy    String     @map("cleaned_by")
   notes        String?    @map("notes")
   roomDetail   RoomDetail @relation(fields: [roomDetailId], references: [id])
@@ -171,8 +174,8 @@ model MaintenanceLog {
   id           Int        @id @default(autoincrement()) @map("id")
   roomDetailId Int        @map("room_detail_id")
   issue        String     @map("issue")
-  reportedAt   DateTime   @map("reported_at")
-  resolvedAt   DateTime?  @map("resolved_at")
+  reportedAt   DateTime   @map("reported_at") @db.Timestamp
+  resolvedAt   DateTime?  @map("resolved_at") @db.Timestamp
   status       String     @map("status")
   notes        String?    @map("notes")
   roomDetail   RoomDetail @relation(fields: [roomDetailId], references: [id])
@@ -190,8 +193,8 @@ model Product {
   category      String      @map("category")
   imageUrl      String[]    @map("image_urls")
   stockQuantity Int         @map("stock_quantity")
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamp
   orderItems    OrderItem[]
 
   @@index([category])
@@ -204,8 +207,8 @@ model Order {
   userId      Int         @map("user_id")
   totalAmount Float       @map("total_amount")
   status      String      @map("status")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamp
   user        User        @relation(fields: [userId], references: [id])
   orderItems  OrderItem[]
   payment     Payment?
@@ -238,8 +241,8 @@ model Payment {
   bookingId     String?       @map("booking_id")
   orderId       String?       @unique @map("order_id")
   transactionId String?       @map("transaction_id")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamp
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamp
   booking       Booking?      @relation(fields: [bookingId], references: [id])
   order         Order?        @relation(fields: [orderId], references: [id])
 
@@ -257,8 +260,8 @@ model AdditionalFee {
   feeType     FeeType  @map("fee_type")
   amount      Float
   description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp
   booking     Booking  @relation(fields: [bookingId], references: [id])
 
   @@index([bookingId])
@@ -269,8 +272,8 @@ model CancellationPolicy {
   id                Int      @id @default(autoincrement())
   daysBeforeCheckin Int      @map("days_before_checkin")
   feePercentage     Float    @map("fee_percentage")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamp
 
   @@map("CANCELLATION_POLICIES")
 }
@@ -281,8 +284,8 @@ model Refund {
   amount    Float        @map("amount")
   status    RefundStatus @map("status")
   reason    String       @map("reason")
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamp
   booking   Booking      @relation(fields: [bookingId], references: [id])
 
   @@index([bookingId])
@@ -297,11 +300,11 @@ model Admin {
   password               String      @map("password")
   failedLoginAttempts    Int         @default(0) @map("failed_login_attempts")
   isActive               Boolean     @default(true) @map("is_active")
-  createdAt              DateTime    @default(now()) @map("created_at")
-  updatedAt              DateTime    @updatedAt @map("updated_at")
-  lastLoginAt            DateTime?   @map("last_login_at")
+  createdAt              DateTime    @default(now()) @map("created_at") @db.Timestamp
+  updatedAt              DateTime    @updatedAt @map("updated_at") @db.Timestamp
+  lastLoginAt            DateTime?   @map("last_login_at") @db.Timestamp
   currentRefreshToken    String?     @map("current_refresh_token")
-  currentRefreshTokenExp DateTime?   @map("current_refresh_token_exp")
+  currentRefreshTokenExp DateTime?   @map("current_refresh_token_exp") @db.Timestamp
   AdminRole              AdminRole[]
 
   @@index([email])
@@ -314,8 +317,8 @@ model Role {
   description     String?
   adminRoles      AdminRole[]
   rolePermissions RolePermission[]
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamp
 
   @@map("ROLES")
 }
@@ -327,8 +330,8 @@ model Permission {
   resource        String // 예: 'reservation', 'customer', 'employee'
   action          String // 예: 'read', 'create', 'update', 'delete'
   rolePermissions RolePermission[]
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamp
 
   @@unique([resource, action])
   @@map("PERMISSIONS")
@@ -338,8 +341,8 @@ model AdminRole {
   id        Int      @id @default(autoincrement())
   adminId   String   @map("admin_id")
   roleId    Int      @map("role_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp
   admin     Admin    @relation(fields: [adminId], references: [id])
   role      Role     @relation(fields: [roleId], references: [id])
 
@@ -353,8 +356,8 @@ model RolePermission {
   permissionId Int        @map("permission_id")
   role         Role       @relation(fields: [roleId], references: [id])
   permission   Permission @relation(fields: [permissionId], references: [id])
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamp
 
   @@unique([roleId, permissionId])
   @@map("ROLE_PERMISSIONS")
