@@ -1,7 +1,7 @@
 import {Injectable} from '@nestjs/common';
 import {PrismaService} from '@app/common/prisma/prisma.service';
 import {CreateBookingDto} from '@apps/rest/booking/dto/create-booking.dto';
-import { BookingStatus, PaymentStatus, Prisma} from '@prisma/client';
+import {Booking, BookingStatus, PaymentStatus, Prisma} from '@prisma/client';
 import {
     BookingConflictException,
     BookingException,
@@ -329,4 +329,30 @@ export class BookingService {
         return orderBy;
     }
 
+    async getBookingDetail(bookingId: string): Promise<Booking | null> {
+        const booking = await this.prisma.booking.findUnique({
+            where: { id: bookingId },
+            include: {
+                roomDetail: true,
+                bookingDetails: true,
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true,
+                    },
+                },
+                payments: true,
+                statusHistories: {
+                    orderBy: {
+                        createdAt: 'desc' as const,
+                    },
+                },
+            },
+        } as Prisma.BookingFindUniqueArgs);
+
+
+        return booking;
+    }
 }

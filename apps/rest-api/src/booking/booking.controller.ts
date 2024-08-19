@@ -16,7 +16,16 @@ export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
 
+  @Get('detail/:bookingId')
+  @ApiOperation({ summary: '예약 상세 정보 조회' })
+  @ApiParam({ name: 'bookingId', type: 'string', description: 'Booking ID (UUID)' })
+  @ApiResponse({ status: 200, description: '예약 상세 정보 조회 성공' })
+  @ApiResponse({ status: 404, description: '예약을 찾을 수 없음' })
+  async getBookingDetail(@Param('bookingId') bookingId: string) {
+    const booking = await this.bookingService.getBookingDetail(bookingId);
 
+    return createSuccessResponse({ booking }, 200);
+  }
   @Get(':userId')
   @ApiOperation({ summary: '사용자에 대한 예약 조회' })
   @ApiParam({ name: 'userId', type: 'number', description: 'User ID' })
