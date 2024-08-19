@@ -1,8 +1,9 @@
 import {Injectable} from '@nestjs/common';
 import {PrismaService} from '@app/common/prisma/prisma.service';
 import {CreateBookingDto} from '@apps/rest/booking/dto/create-booking.dto';
-import {Booking, BookingStatus, PaymentStatus, Prisma} from '@prisma/client';
+import {Booking, BookingStatus, PaymentStatus, Prisma, RefundStatus, User} from '@prisma/client';
 import {
+    BookingCancelledException,
     BookingConflictException,
     BookingException,
     BookingNotFoundException,
@@ -16,6 +17,7 @@ import {ErrorCode} from '@apps/rest/room/exceptions/error-codes';
 import {PaymentService} from '@apps/rest/payment/payment.service';
 import {ConfirmPaymentDto} from '@apps/rest/payment/dto/confirm-payment.dto';
 import {BookingQueryDto} from "@apps/rest/booking/dto/booking-query.dto";
+import {CancelBookingDto} from "@apps/rest/booking/dto/booking-cancel.dto";
 
 @Injectable()
 export class BookingService {
@@ -98,9 +100,9 @@ export class BookingService {
                         reason: 'Initial booking',
                     },
                 });
-        console.log('boking', booking);
-        console.log('basePricePayment', basePricePayment);
-        console.log('additionalFeesPayment', additionalFeesPayment);
+                console.log('boking', booking);
+                console.log('basePricePayment', basePricePayment);
+                console.log('additionalFeesPayment', additionalFeesPayment);
                 return {booking, payment: basePricePayment, additionalFeesPayment};
             });
         } catch (error) {
@@ -277,7 +279,7 @@ export class BookingService {
                     bookingDetails: true,
                 },
             }),
-            this.prisma.booking.count({ where: whereCondition }),
+            this.prisma.booking.count({where: whereCondition}),
         ]);
 
         const totalPages = Math.ceil(totalCount / pageSize);
@@ -296,10 +298,10 @@ export class BookingService {
     }
 
     private buildWhereCondition(userId: number, query: BookingQueryDto): Prisma.BookingWhereInput {
-        const whereCondition: Prisma.BookingWhereInput = { userId };
+        const whereCondition: Prisma.BookingWhereInput = {userId};
 
         if (query.status) {
-            whereCondition.status = Array.isArray(query.status) ? { in: query.status } : query.status;
+            whereCondition.status = Array.isArray(query.status) ? {in: query.status} : query.status;
         }
 
         if (query.dateFrom || query.dateTo) {
@@ -331,7 +333,7 @@ export class BookingService {
 
     async getBookingDetail(bookingId: string): Promise<Booking | null> {
         const booking = await this.prisma.booking.findUnique({
-            where: { id: bookingId },
+            where: {id: bookingId},
             include: {
                 roomDetail: true,
                 bookingDetails: true,
@@ -354,5 +356,85 @@ export class BookingService {
 
 
         return booking;
+    }
+
+    async cancelBooking(cancelBookingDto: CancelBookingDto, user: User) {
+        const {bookingId, reason} = cancelBookingDto;
+        return this.prisma.$transaction(async (prisma) => {
+            const booking = await prisma.booking.findUnique({
+                where: {id: bookingId},
+                include: {payments: true}
+            });
+
+            if (!booking) {
+                throw new BookingNotFoundException();
+            }
+
+            if (booking.status === BookingStatus.CANCELLED) {
+                throw new BookingCancelledException();
+            }
+
+            const now = new Date();
+            const checkInDate = new Date(booking.checkInDate);
+            const daysDifference = Math.ceil((checkInDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+
+            const cancellationPolicy = await prisma.cancellationPolicy.findFirst({
+                where: {
+                    daysBeforeCheckin: {lte: daysDifference}
+                } as Prisma.CancellationPolicyWhereInput,
+                orderBy: {
+                    daysBeforeCheckin: 'desc'
+                } as Prisma.CancellationPolicyOrderByWithRelationInput
+            });
+
+            const cancellationFee = cancellationPolicy
+                ? (booking.basePrice * cancellationPolicy.feePercentage) / 100
+                : 0;
+
+            const refundAmount = booking.basePrice - cancellationFee;
+
+            const updatedBooking = await prisma.booking.update({
+                where: {id: bookingId},
+                data: {
+                    status: BookingStatus.CANCELLED,
+                    cancellationDate: now,
+                    cancellationFee: cancellationFee,
+                }
+            });
+
+            await prisma.bookingStatusHistory.create({
+                data: {
+                    bookingId: bookingId,
+                    status: BookingStatus.CANCELLED,
+                    reason: reason,
+                }
+            });
+
+            if (refundAmount > 0) {
+                await prisma.refund.create({
+                    data: {
+                        bookingId: bookingId,
+                        amount: refundAmount,
+                        status: RefundStatus.PENDING,
+                        reason: reason
+                    }
+                });
+            }
+
+            // RoomAvailability 업데이트
+            await this.updateRoomAvailability(
+                prisma,
+                booking.roomDetailId,
+                booking.checkInDate,
+                booking.checkOutDate,
+                1
+            );
+
+            return {
+                booking: updatedBooking,
+                cancellationFee,
+                refundAmount,
+            };
+        });
     }
 }

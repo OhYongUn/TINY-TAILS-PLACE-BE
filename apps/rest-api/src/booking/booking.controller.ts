@@ -8,6 +8,10 @@ import { BookingExceptionFilter } from '@apps/rest/booking/exceptions/booking-ex
 import { createSuccessResponse } from '@app/common/utils/api-response.util';
 import { ConfirmPaymentDto } from '@apps/rest/payment/dto/confirm-payment.dto';
 import {BookingQueryDto} from "@apps/rest/booking/dto/booking-query.dto";
+import {AccessTokenGuard} from "@app/common/auth/guards/accessToken.guard";
+import {GetUser} from "@app/common/auth/decorators/get-user.decorator";
+import {User} from "@prisma/client";
+import {CancelBookingDto} from "@apps/rest/booking/dto/booking-cancel.dto";
 
 @ApiTags('Booking')
 @Controller('bookings')
@@ -15,6 +19,17 @@ import {BookingQueryDto} from "@apps/rest/booking/dto/booking-query.dto";
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
+
+  @Post(':bookingId/cancel')
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({ summary: '예약 취소' })
+  @ApiResponse({ status: 200, description: '예약 취소 성공' })
+  async cancelBooking(
+      @GetUser() user: User,
+      @Body() cancelBookingDto: CancelBookingDto) {
+    const result = await this.bookingService.cancelBooking(cancelBookingDto,user);
+    return createSuccessResponse(result, 200);
+  }
 
   @Get('detail/:bookingId')
   @ApiOperation({ summary: '예약 상세 정보 조회' })
