@@ -1,14 +1,15 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { User } from '@prisma/client'; // Prisma를 사용하는 경우
+import { Admin, User } from '@prisma/client';
 
-export const GetUser = createParamDecorator(
-  (
-    data: keyof User | undefined,
-    ctx: ExecutionContext,
-  ): User | Partial<User> => {
-    const request = ctx.switchToHttp().getRequest();
-    const user = request.user;
+export type AuthenticatedUser = (User | Admin) & { isAdmin: boolean };
 
-    return data ? user?.[data] : user;
-  },
+export const GetAuthenticatedUser  = createParamDecorator(
+    (data: unknown, ctx: ExecutionContext): AuthenticatedUser => {
+      const request = ctx.switchToHttp().getRequest();
+      const user = request.user;
+
+      return {
+        ...user,
+      };
+    },
 );
