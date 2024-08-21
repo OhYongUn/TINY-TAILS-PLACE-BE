@@ -14,9 +14,18 @@ export class AdminUsersService {
 
     async getAdmin(filter: Prisma.AdminWhereUniqueInput): Promise<Admin> {
         this.logger.log(`사용자 검색 시도: ${JSON.stringify(filter)}`);
-        const admin = await this.prisma.admin.findUnique((
-            {where: filter}
-        ));
+        const admin = await this.prisma.admin.findUnique({
+            where: filter,
+            include: {
+                department: true,
+                AdminRole: {
+                    include: {
+                        role: true
+                    }
+                }
+            }
+        });
+
         if (!admin) {
             this.logger.warn(`사용자를 찾을 수 없음: ${JSON.stringify(filter)}`);
             throw new UserNotFoundException();
