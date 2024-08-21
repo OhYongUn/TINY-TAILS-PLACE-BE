@@ -91,13 +91,7 @@ export class AuthController {
   @ApiSwaggerResponse({ status: 200, description: '토큰 갱신 성공' })
   @ApiUnauthorizedResponse({ description: '유효하지 않은 리프레시 토큰' })
   @ApiBody({ type: RefreshTokenDto })
-  async refresh(@Body() refreshTokenDto: RefreshTokenDto): Promise<
-    ReturnType<
-      typeof createSuccessResponse<{
-        accessToken: string;
-      }>
-    >
-  > {
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
     return await this.authService.refresh(refreshTokenDto);
   }
 
@@ -108,9 +102,7 @@ export class AuthController {
   @ApiBadRequestResponse({ description: '이메일 누락' })
   @ApiUnauthorizedResponse({ description: '사용자를 찾을 수 없음' })
   @ApiBody({ schema: { properties: { email: { type: 'string' } } } })
-  async logout(
-    @Body('email') email: string,
-  ): Promise<ReturnType<typeof createSuccessResponse<null>>> {
+  async logout(@Body('email') email: string) {
     await this.authService.logout(email);
     return createSuccessResponse(null);
   }

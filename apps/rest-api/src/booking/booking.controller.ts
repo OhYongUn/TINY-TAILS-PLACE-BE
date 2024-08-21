@@ -1,17 +1,26 @@
 // booking.controller.ts
-import {Body, Controller, Get, Param, Post, Query, UseFilters, UseGuards} from '@nestjs/common';
-import {ApiOperation, ApiParam, ApiResponse, ApiTags} from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseFilters,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
 import { InitiateBookingResponseDto } from '@apps/rest/booking/dto/Initiate-booking-response.dto';
 import { CreateBookingDto } from '@apps/rest/booking/dto/create-booking.dto';
 import { BookingExceptionFilter } from '@apps/rest/booking/exceptions/booking-exception.filter';
 import { createSuccessResponse } from '@app/common/utils/api-response.util';
 import { ConfirmPaymentDto } from '@apps/rest/payment/dto/confirm-payment.dto';
-import {BookingQueryDto} from "@apps/rest/booking/dto/booking-query.dto";
-import {AccessTokenGuard} from "@app/common/auth/guards/accessToken.guard";
-import {GetUser} from "@app/common/auth/decorators/get-user.decorator";
-import {User} from "@prisma/client";
-import {CancelBookingDto} from "@apps/rest/booking/dto/booking-cancel.dto";
+import { BookingQueryDto } from '@apps/rest/booking/dto/booking-query.dto';
+import { AccessTokenGuard } from '@app/common/auth/guards/accessToken.guard';
+import { GetUser } from '@app/common/auth/decorators/get-user.decorator';
+import { User } from '@prisma/client';
+import { CancelBookingDto } from '@apps/rest/booking/dto/booking-cancel.dto';
 
 @ApiTags('Booking')
 @Controller('bookings')
@@ -19,43 +28,38 @@ import {CancelBookingDto} from "@apps/rest/booking/dto/booking-cancel.dto";
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
-
   @Post(':bookingId/cancel')
   @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: '예약 취소' })
   @ApiResponse({ status: 200, description: '예약 취소 성공' })
   async cancelBooking(
-      @GetUser() user: User,
-      @Body() cancelBookingDto: CancelBookingDto) {
-    const result = await this.bookingService.cancelBooking(cancelBookingDto,user);
-    return createSuccessResponse(result, 200);
+    @GetUser() user: User,
+    @Body() cancelBookingDto: CancelBookingDto,
+  ) {
+    return await this.bookingService.cancelBooking(cancelBookingDto, user);
   }
 
   @Get('detail/:bookingId')
   @ApiOperation({ summary: '예약 상세 정보 조회' })
-  @ApiParam({ name: 'bookingId', type: 'string', description: 'Booking ID (UUID)' })
+  @ApiParam({
+    name: 'bookingId',
+    type: 'string',
+    description: 'Booking ID (UUID)',
+  })
   @ApiResponse({ status: 200, description: '예약 상세 정보 조회 성공' })
   @ApiResponse({ status: 404, description: '예약을 찾을 수 없음' })
   async getBookingDetail(@Param('bookingId') bookingId: string) {
-    const booking = await this.bookingService.getBookingDetail(bookingId);
-
-    return createSuccessResponse({ booking }, 200);
+    return await this.bookingService.getBookingDetail(bookingId);
   }
+
   @Get(':userId')
   @ApiOperation({ summary: '사용자에 대한 예약 조회' })
   @ApiParam({ name: 'userId', type: 'number', description: 'User ID' })
   async getBookings(
-      @Param('userId') userId: number,
-      @Query() query: BookingQueryDto
+    @Param('userId') userId: number,
+    @Query() query: BookingQueryDto,
   ) {
-
-    const result = await this.bookingService.getBookings(userId, query);
-    return createSuccessResponse(
-        {
-          bookings: result
-        },
-        200
-    );
+    return await this.bookingService.getBookings(userId, query);
   }
 
   @Post()

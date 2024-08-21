@@ -5,7 +5,6 @@ import { RoomService } from './room.service';
 import { SearchRoomsDto } from './dto/search-rooms.dto';
 import { RoomExceptionFilter } from '@apps/rest/room/exceptions/room-exception.filter';
 import { AvailableRoomClassDto } from '@apps/rest/room/dto/available-room-class.dto';
-import { createSuccessResponse } from '@app/common/utils/api-response.util';
 
 @ApiTags('rooms')
 @Controller('rooms')
@@ -24,8 +23,7 @@ export class RoomController {
   @ApiQuery({ name: 'checkInDate', required: true, type: String })
   @ApiQuery({ name: 'checkOutDate', required: true, type: String })
   async getAvailableRooms(@Query() query: SearchRoomsDto) {
-    const result = await this.roomService.findAvailableRooms(query);
-    return createSuccessResponse(result);
+    return await this.roomService.findAvailableRooms(query);
   }
 }
 

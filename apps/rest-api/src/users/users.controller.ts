@@ -3,16 +3,11 @@ import { UpdatePasswordDto } from '@apps/rest/users/dto/update-password.dto';
 import { UsersService } from '@apps/rest/users/users.service';
 import { AccessTokenGuard } from '@app/common/auth/guards/accessToken.guard';
 import { UpdateUserProfileDto } from '@apps/rest/users/dto/update-user-profile.dto';
-import { Request } from 'express';
 import { User } from '@prisma/client';
 import { ApiTags } from '@nestjs/swagger';
 import { createSuccessResponse } from '@app/common/utils/api-response.util';
 import { UserExceptionFilter } from '@apps/rest/users/exceptions/user-exception.filter';
 import { GetUser } from '@app/common/auth/decorators/get-user.decorator';
-
-interface RequestWithUser extends Request {
-  user: User;
-}
 
 @ApiTags('users')
 @Controller('users')
