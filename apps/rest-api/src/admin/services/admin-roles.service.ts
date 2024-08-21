@@ -1,16 +1,16 @@
 import {Injectable} from "@nestjs/common";
 import {PrismaService} from "@app/common/prisma/prisma.service";
-import {CreateRoleDto} from "@apps/rest/roles/dto/create-role.dto";
-import {UpdateRoleDto} from "@apps/rest/roles/dto/update-role.dto";
-import {CreatePermissionDto} from "@apps/rest/roles/dto/create-permission.dto";
-import {CreateAdminRoleDto} from "@apps/rest/roles/dto/create-admin-role.dto";
-import {UpdateAdminRoleDto} from "@apps/rest/roles/dto/update-admin-role.dto";
-import {CreateRolePermissionDto} from "@apps/rest/roles/dto/create-role-permission.dto";
-import {UpdateRolePermissionDto} from "@apps/rest/roles/dto/update-role-permission.dto";
-import {UpdatePermissionDto} from "@apps/rest/roles/dto/update-permission.dto";
+import {CreateRoleDto} from "@apps/rest/admin/dto/roles/create-role.dto";
+import {UpdateRoleDto} from "@apps/rest/admin/dto/roles/update-role.dto";
+import {CreatePermissionDto} from "@apps/rest/admin/dto/roles/create-permission.dto";
+import {CreateAdminRoleDto} from "@apps/rest/admin/dto/roles/create-admin-role.dto";
+import {UpdateAdminRoleDto} from "@apps/rest/admin/dto/roles/update-admin-role.dto";
+import {CreateRolePermissionDto} from "@apps/rest/admin/dto/roles/create-role-permission.dto";
+import {UpdateRolePermissionDto} from "@apps/rest/admin/dto/roles/update-role-permission.dto";
+import {UpdatePermissionDto} from "@apps/rest/admin/dto/roles/update-permission.dto";
 
 @Injectable()
-export class RolesService {
+export class AdminRolesService {
     constructor(private prisma: PrismaService) {}
 
     // Role operations

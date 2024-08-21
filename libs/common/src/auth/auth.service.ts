@@ -17,7 +17,7 @@ import {
 import {UsersService} from '@apps/rest/users/users.service';
 import {CreateUserDto} from '@apps/rest/users/dto/CreateUserDto';
 import {UserResponseDto} from '@apps/rest/users/dto/UserResponseDto';
-import {AdminService} from "@apps/rest/admin/admin.service";
+import {AdminUsersService} from "@apps/rest/admin/services/admin-users.service";
 
 @Injectable()
 export class AuthService {
@@ -31,7 +31,7 @@ export class AuthService {
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
-        private readonly adminService: AdminService,
+        private readonly adminUserService: AdminUsersService,
     ) {
         this.accessTokenSecret = this.configService.get<string>(
             'JWT_ACCESS_TOKEN_SECRET',
@@ -132,7 +132,7 @@ export class AuthService {
 
     async validateAdmin(email: string, password: string): Promise<any> {
 
-        const admin = await this.adminService.getAdmin({email});
+        const admin = await this.adminUserService.getAdmin({email});
         if (admin && await bcrypt.compare(password, admin.password)) {
             const {password, ...result} = admin;
             return {...result, role: 'admin'};
