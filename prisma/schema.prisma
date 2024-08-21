@@ -292,12 +292,31 @@ model Refund {
   @@map("REFUNDS")
 }
 
+model Department {
+  id          String   @id @default(uuid()) @map("id")
+  name        String   @map("name")
+  code        String   @unique @map("code")
+  parentId    String?  @map("parent_id")
+  description String?  @map("description")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp
+
+  parent   Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children Department[] @relation("DepartmentHierarchy")
+  admins   Admin[]
+
+  @@map("DEPARTMENTS")
+}
+
 model Admin {
   id                     String      @id @default(uuid()) @map("id")
   name                   String      @map("name")
   email                  String      @unique @map("email")
   phone                  String      @default("") @map("phone")
   password               String      @map("password")
+  departmentId           String?     @map("department_id")
+  department             Department? @relation(fields: [departmentId], references: [id])
   failedLoginAttempts    Int         @default(0) @map("failed_login_attempts")
   isActive               Boolean     @default(true) @map("is_active")
   createdAt              DateTime    @default(now()) @map("created_at") @db.Timestamp
