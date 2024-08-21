@@ -25,7 +25,6 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { createSuccessResponse } from '@app/common/utils/api-response.util';
 
 interface RequestWithUser extends Request {
   user: User;
@@ -104,6 +103,10 @@ export class AuthController {
   @ApiBody({ schema: { properties: { email: { type: 'string' } } } })
   async logout(@Body('email') email: string) {
     await this.authService.logout(email);
-    return createSuccessResponse(null);
+    return {
+      data: null,
+      message: '로그아웃 성공',
+      statusCode: HttpStatus.OK, // 명시적으로 200 상태 코드 지정
+    };
   }
 }
