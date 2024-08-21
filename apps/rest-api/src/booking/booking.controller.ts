@@ -14,7 +14,6 @@ import { BookingService } from './booking.service';
 import { InitiateBookingResponseDto } from '@apps/rest/booking/dto/Initiate-booking-response.dto';
 import { CreateBookingDto } from '@apps/rest/booking/dto/create-booking.dto';
 import { BookingExceptionFilter } from '@apps/rest/booking/exceptions/booking-exception.filter';
-import { createSuccessResponse } from '@app/common/utils/api-response.util';
 import { ConfirmPaymentDto } from '@apps/rest/payment/dto/confirm-payment.dto';
 import { BookingQueryDto } from '@apps/rest/booking/dto/booking-query.dto';
 import { AccessTokenGuard } from '@app/common/auth/guards/accessToken.guard';
@@ -73,14 +72,11 @@ export class BookingController {
       await this.bookingService.createBookingAndInitiatePayment(
         createBookingDto,
       );
-    return createSuccessResponse(
-      {
-        bookingId: result.booking.id,
-        paymentId: result.payment.id,
-        amount: result.booking.basePrice,
-      },
-      201,
-    );
+    return {
+      bookingId: result.booking.id,
+      paymentId: result.payment.id,
+      amount: result.booking.basePrice,
+    };
   }
 
   @Post('confirm')
@@ -88,13 +84,10 @@ export class BookingController {
   @ApiResponse({ status: 200, description: '결제 확인 성공' })
   async confirmPayment(@Body() confirmPaymentDto: ConfirmPaymentDto) {
     const result = await this.bookingService.confirmPayment(confirmPaymentDto); // await 추가
-    return createSuccessResponse(
-      {
-        bookingId: result.booking.id,
-        paymentId: result.payment.id,
-      },
-      201,
-    );
+    return {
+      bookingId: result.booking.id,
+      paymentId: result.payment.id,
+    };
   }
 }
 
