@@ -1,4 +1,4 @@
-import {IsBoolean, IsString} from 'class-validator';
+import { IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AccessTokenPayloadDto {
@@ -15,7 +15,4 @@ export class AccessTokenPayloadDto {
   })
   @IsString()
   userName: string;
-
-  @IsBoolean()
-  isAdmin: boolean;
 }

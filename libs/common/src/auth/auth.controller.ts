@@ -58,11 +58,13 @@ export class AuthController {
   @ApiBadRequestResponse({ description: '잘못된 요청 데이터' })
   @ApiSwaggerResponse({ status: 409, description: '이미 존재하는 사용자' })
   @ApiBody({ type: CreateUserDto })
-  async register(
-    @Body() createUserDto: CreateUserDto,
-  ): Promise<ReturnType<typeof createSuccessResponse<null>>> {
+  async register(@Body() createUserDto: CreateUserDto) {
     await this.authService.register(createUserDto);
-    return createSuccessResponse(null, HttpStatus.CREATED);
+    return {
+      data: null,
+      message: '회원가입이 성공적으로 완료되었습니다.',
+      statusCode: HttpStatus.CREATED,
+    };
   }
 
   @UseGuards(LocalGuard)
@@ -76,12 +78,8 @@ export class AuthController {
     type: LoginResponseDto,
   })
   @ApiUnauthorizedResponse({ description: '인증 실패' })
-  async login(
-    @Req() req: RequestWithUser,
-  ): Promise<ReturnType<typeof createSuccessResponse<LoginResponseDto>>> {
-    const loginResponse = await this.authService.login(req.user);
-    console.log('loginResponse', loginResponse);
-    return createSuccessResponse(loginResponse);
+  async login(@Req() req: RequestWithUser) {
+    return await this.authService.login(req.user);
   }
 
   @Post('refresh')
@@ -100,8 +98,7 @@ export class AuthController {
       }>
     >
   > {
-    const newAccessToken = await this.authService.refresh(refreshTokenDto);
-    return createSuccessResponse(newAccessToken);
+    return await this.authService.refresh(refreshTokenDto);
   }
 
   @Post('logout')
