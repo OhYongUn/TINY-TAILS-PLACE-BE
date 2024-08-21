@@ -1,0 +1,25 @@
+-- AlterTable
+ALTER TABLE "ADMINS" ADD COLUMN     "department_id" TEXT;
+
+-- CreateTable
+CREATE TABLE "DEPARTMENTS" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "parent_id" TEXT,
+    "description" TEXT,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL,
+
+    CONSTRAINT "DEPARTMENTS_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DEPARTMENTS_code_key" ON "DEPARTMENTS"("code");
+
+-- AddForeignKey
+ALTER TABLE "DEPARTMENTS" ADD CONSTRAINT "DEPARTMENTS_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "DEPARTMENTS"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ADMINS" ADD CONSTRAINT "ADMINS_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "DEPARTMENTS"("id") ON DELETE SET NULL ON UPDATE CASCADE;
