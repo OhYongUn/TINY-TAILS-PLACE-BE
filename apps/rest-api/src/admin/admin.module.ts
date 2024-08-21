@@ -13,5 +13,6 @@ import {RolesGuard} from "@apps/rest/admin/guards/roles.guard";
     provide: APP_GUARD,
     useClass: RolesGuard,
   },],
+  exports:[AdminRolesService]
 })
 export class AdminModule {}

@@ -1,4 +1,4 @@
-import {Injectable, Logger} from '@nestjs/common';
+import {Injectable, Logger, UnauthorizedException} from '@nestjs/common';
 import {JwtService} from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import {AccessTokenPayloadDto} from './dto/accessTokenPayload.dto';
@@ -31,7 +31,7 @@ export class AuthService {
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
-        private readonly adminUserService: AdminUsersService,
+        private readonly adminUsersService: AdminUsersService,
     ) {
         this.accessTokenSecret = this.configService.get<string>(
             'JWT_ACCESS_TOKEN_SECRET',
@@ -113,6 +113,7 @@ export class AuthService {
         const payload: AccessTokenPayloadDto = {
             userEmail: user.email,
             userName: user.name,
+            isAdmin: user.isAdmin
         };
         return this.jwtService.sign(payload, {
             secret: this.accessTokenSecret,
@@ -132,12 +133,42 @@ export class AuthService {
 
     async validateAdmin(email: string, password: string): Promise<any> {
 
-        const admin = await this.adminUserService.getAdmin({email});
+        const admin = await this.adminUsersService.getAdmin({email});
         if (admin && await bcrypt.compare(password, admin.password)) {
             const {password, ...result} = admin;
             return {...result, role: 'admin'};
         }
         return null;
 
+    }
+
+    async validateByPayload(payload: AccessTokenPayloadDto) {
+        const { isAdmin, userEmail } = payload;
+        const service = isAdmin ? this.adminUsersService : this.usersService;
+        const entityName = isAdmin ? 'Admin' : 'User';
+        const getMethod = isAdmin ? 'getAdmin' : 'getUser';
+
+        const entity = await service[getMethod]({ email: userEmail });
+
+        if (!entity) {
+            throw new UnauthorizedException(`${entityName} not found`);
+        }
+
+        if (entity.email !== userEmail) {
+            throw new UnauthorizedException(`Invalid ${entityName.toLowerCase()} information`);
+        }
+
+        const result = {
+            userId: entity.id,
+            email: entity.email,
+            name: entity.name,
+            isAdmin,
+        };
+
+        if (isAdmin) {
+            result['roles'] = entity.roles;
+        }
+
+        return result;
     }
 }
