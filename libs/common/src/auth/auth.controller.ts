@@ -25,6 +25,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { AdminLocalGuard } from '@app/common/auth/guards/admin-local-guard';
 
 interface RequestWithUser extends Request {
   user: User;
@@ -108,5 +109,10 @@ export class AuthController {
       message: '로그아웃 성공',
       statusCode: HttpStatus.OK, // 명시적으로 200 상태 코드 지정
     };
+  }
+  @Post('/admin/login')
+  @UseGuards(AdminLocalGuard)
+  async adminLogin(@Req() req) {
+    return await this.authService.adminLogin(req.user);
   }
 }
