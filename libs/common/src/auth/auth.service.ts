@@ -1,12 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { AccessTokenPayloadDto } from './dto/accessTokenPayload.dto';
-import { RefreshTokenPayloadDto } from './dto/refreshTokenPayload.dto';
 import { RefreshTokenDto } from './dto/refreshToken.dto';
 import { NewAccessTokenDto } from './dto/newAccessToken.dto';
 import { User } from '@prisma/client';
-import { ConfigService } from '@nestjs/config';
 import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
 import {
   InvalidTokenException,
@@ -17,37 +17,19 @@ import {
 import { UsersService } from '@apps/rest/users/users.service';
 import { CreateUserDto } from '@apps/rest/users/dto/CreateUserDto';
 import { UserResponseDto } from '@apps/rest/users/dto/UserResponseDto';
+import { AdminUsersService } from '@apps/rest/admin/services/admin-users.service';
+import { TokenService } from '@app/common/auth/token.service';
+import { CreateAdminDto } from '@app/common/auth/dto/create-admin.dto';
 
 @Injectable()
 export class AuthService {
-  private readonly accessTokenSecret: string;
-  private readonly refreshTokenSecret: string;
-  private readonly accessTokenExpiration: number;
-  private readonly refreshTokenExpiration: number;
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
     private readonly usersService: UsersService,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-  ) {
-    this.accessTokenSecret = this.configService.get<string>(
-      'JWT_ACCESS_TOKEN_SECRET',
-      'default_access_token_secret',
-    );
-    this.refreshTokenSecret = this.configService.get<string>(
-      'JWT_REFRESH_SECRET',
-      'default_refresh_token_secret',
-    );
-    this.accessTokenExpiration = this.configService.get<number>(
-      'JWT_ACCESS_EXPIRES',
-      3600,
-    );
-    this.refreshTokenExpiration = this.configService.get<number>(
-      'JWT_REFRESH_EXPIRES',
-      86400,
-    );
-  }
+    private readonly adminUsersService: AdminUsersService,
+    private readonly tokenService: TokenService,
+  ) {}
 
   async register(createUserDto: CreateUserDto): Promise<void> {
     try {
@@ -69,10 +51,17 @@ export class AuthService {
     return user;
   }
 
-  async login(user: User): Promise<LoginResponseDto> {
-    const accessToken: string = await this.getAccessToken(user);
-    const refreshToken: string = await this.getRefreshToken(user);
-    await this.usersService.setCurrentRefreshToken(user.email, refreshToken);
+  async login(user: any): Promise<LoginResponseDto> {
+    const accessToken: string = await this.tokenService.getAccessToken(user);
+    const refreshToken: string = await this.tokenService.getRefreshToken(user);
+    const currentRefreshToken =
+      await this.tokenService.getHashedRefreshToken(refreshToken);
+    const currentRefreshTokenExp = this.tokenService.getRefreshTokenExp();
+    await this.usersService.updateUser(
+      user.email,
+      currentRefreshToken,
+      currentRefreshTokenExp,
+    );
 
     const userResponseDto: UserResponseDto = {
       id: user.id,
@@ -86,14 +75,13 @@ export class AuthService {
   async refresh(refreshTokenDto: RefreshTokenDto): Promise<NewAccessTokenDto> {
     const { refreshToken } = refreshTokenDto;
     try {
-      const { userEmail } = await this.jwtService.verify(refreshToken, {
-        secret: this.refreshTokenSecret,
-      });
+      const userEmail = await this.tokenService.refresh(refreshToken);
+
       const user = await this.usersService.getUserForRefreshToken(
         userEmail,
         refreshToken,
       );
-      const accessToken = await this.getAccessToken(user);
+      const accessToken = await this.tokenService.getAccessToken(user);
       return { accessToken };
     } catch (error) {
       throw new InvalidTokenException();
@@ -107,24 +95,38 @@ export class AuthService {
     await this.usersService.removeCurrentRefreshToken(email);
   }
 
-  private async getAccessToken(user: User): Promise<string> {
-    const payload: AccessTokenPayloadDto = {
-      userEmail: user.email,
-      userName: user.name,
-    };
-    return this.jwtService.sign(payload, {
-      secret: this.accessTokenSecret,
-      expiresIn: this.accessTokenExpiration,
-    });
+  async validateAdmin(email: any, password: string) {
+    const user = await this.adminUsersService.getAdmin({ email });
+    if (!user) {
+      throw new UserNotFoundException();
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new PasswordWrongException();
+    }
+    return user;
   }
 
-  private async getRefreshToken(user: User): Promise<string> {
-    const payload: RefreshTokenPayloadDto = {
-      userEmail: user.email,
-    };
-    return this.jwtService.sign(payload, {
-      secret: this.refreshTokenSecret,
-      expiresIn: this.refreshTokenExpiration,
-    });
+  async adminLogin(user: any) {
+    const accessToken: string = await this.tokenService.getAccessToken(user);
+    const refreshToken: string = await this.tokenService.getRefreshToken(user);
+    const currentRefreshToken =
+      await this.tokenService.getHashedRefreshToken(refreshToken);
+    const currentRefreshTokenExp = this.tokenService.getRefreshTokenExp();
+    await this.adminUsersService.updateAdmin(
+      user.email,
+      currentRefreshToken,
+      currentRefreshTokenExp,
+    );
+
+    return { accessToken, refreshToken, user };
+  }
+
+  async adminRegister(createAdminDto: CreateAdminDto) {
+    try {
+      await this.adminUsersService.adminRegister(createAdminDto);
+    } catch (e) {
+      throw new InternalServerErrorException('Failed to update user');
+    }
   }
 }

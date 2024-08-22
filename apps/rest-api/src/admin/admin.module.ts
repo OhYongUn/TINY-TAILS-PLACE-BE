@@ -12,6 +12,6 @@ import { AdminUsersService } from '@apps/rest/admin/services/admin-users.service
     AdminRolesController,
   ],
   providers: [AdminUsersService, AdminRolesService],
-  exports: [AdminRolesService],
+  exports: [AdminRolesService,AdminUsersService],
 })
 export class AdminModule {}

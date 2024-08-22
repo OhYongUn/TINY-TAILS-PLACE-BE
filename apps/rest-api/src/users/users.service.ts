@@ -159,35 +159,9 @@ export class UsersService {
         'Email is required to remove refresh token',
       );
     }
-    await this.updateUser(email, {
-      currentRefreshToken: null,
-      currentRefreshTokenExp: null,
-    });
-  }
-
-  async getHashedRefreshToken(refreshToken: string): Promise<string> {
-    return bcryptjs.hash(refreshToken, 10);
-  }
-
-  async setCurrentRefreshToken(
-    email: string,
-    refreshToken: string,
-  ): Promise<void> {
-    const currentRefreshToken = await this.getHashedRefreshToken(refreshToken);
-    const currentRefreshTokenExp = this.getRefreshTokenExp();
-    await this.updateUser(email, {
-      currentRefreshToken,
-      currentRefreshTokenExp,
-    });
-  }
-
-  getRefreshTokenExp(): Date {
-    const now = new Date();
-    const expirationTime =
-      this.configService.get<number>('JWT_REFRESH_EXPIRATION') ||
-      this.DEFAULT_REFRESH_TOKEN_EXPIRATION;
-
-    return new Date(now.getTime() + expirationTime * 1000);
+    const currentRefreshToken = null;
+    const currentRefreshTokenExp = null;
+    await this.updateUser(email, currentRefreshToken, currentRefreshTokenExp);
   }
 
   async getUserForRefreshToken(
@@ -224,10 +198,15 @@ export class UsersService {
     return name.length >= 2; // 예시: 2자 이상
   }
 
-  private async updateUser(
+  async updateUser(
     email: string,
-    data: Prisma.UserUpdateInput,
+    currentRefreshToken: string | null,
+    currentRefreshTokenExp: Date | null,
   ): Promise<void> {
+    const data = {
+      currentRefreshToken,
+      currentRefreshTokenExp,
+    } as Prisma.UserUpdateInput;
     if (!email) {
       throw new BadRequestException('Email is required to update user');
     }
