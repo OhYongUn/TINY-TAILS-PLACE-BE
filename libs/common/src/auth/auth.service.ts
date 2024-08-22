@@ -51,10 +51,17 @@ export class AuthService {
     return user;
   }
 
-  async login(user: User): Promise<LoginResponseDto> {
+  async login(user: any): Promise<LoginResponseDto> {
     const accessToken: string = await this.tokenService.getAccessToken(user);
     const refreshToken: string = await this.tokenService.getRefreshToken(user);
-    await this.usersService.setCurrentRefreshToken(user.email, refreshToken);
+    const currentRefreshToken =
+      await this.tokenService.getHashedRefreshToken(refreshToken);
+    const currentRefreshTokenExp = this.tokenService.getRefreshTokenExp();
+    await this.usersService.updateUser(
+      user.email,
+      currentRefreshToken,
+      currentRefreshTokenExp,
+    );
 
     const userResponseDto: UserResponseDto = {
       id: user.id,
@@ -101,10 +108,8 @@ export class AuthService {
   }
 
   async adminLogin(user: any) {
-    const accessToken: string =
-      await this.tokenService.getAdminAccessToken(user);
-    const refreshToken: string =
-      await this.tokenService.getAdminRefreshToken(user);
+    const accessToken: string = await this.tokenService.getAccessToken(user);
+    const refreshToken: string = await this.tokenService.getRefreshToken(user);
     const currentRefreshToken =
       await this.tokenService.getHashedRefreshToken(refreshToken);
     const currentRefreshTokenExp = this.tokenService.getRefreshTokenExp();

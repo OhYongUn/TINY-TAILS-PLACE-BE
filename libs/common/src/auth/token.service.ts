@@ -1,9 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { AccessTokenPayloadDto } from '@app/common/auth/dto/accessTokenPayload.dto';
-import { RefreshTokenPayloadDto } from '@app/common/auth/dto/refreshTokenPayload.dto';
 import * as bcryptjs from 'bcryptjs';
 
 @Injectable()
@@ -36,28 +33,7 @@ export class TokenService {
       86400,
     );
   }
-  async getAccessToken(user: User): Promise<string> {
-    const payload: AccessTokenPayloadDto = {
-      userEmail: user.email,
-      userName: user.name,
-    };
-    return this.jwtService.sign(payload, {
-      secret: this.accessTokenSecret,
-      expiresIn: this.accessTokenExpiration,
-    });
-  }
-
-  async getRefreshToken(user: User): Promise<string> {
-    const payload: RefreshTokenPayloadDto = {
-      userEmail: user.email,
-    };
-    return this.jwtService.sign(payload, {
-      secret: this.refreshTokenSecret,
-      expiresIn: this.refreshTokenExpiration,
-    });
-  }
-
-  async getAdminAccessToken(user: any) {
+  async getAccessToken(user: any): Promise<string> {
     const payload = {
       userEmail: user.email,
       userName: user.name,
@@ -67,7 +43,8 @@ export class TokenService {
       expiresIn: this.accessTokenExpiration,
     });
   }
-  async getAdminRefreshToken(user: any): Promise<string> {
+
+  async getRefreshToken(user: any): Promise<string> {
     const payload = {
       userEmail: user.email,
     };

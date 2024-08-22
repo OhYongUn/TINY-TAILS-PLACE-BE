@@ -10,8 +10,6 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalGuard } from '@app/common/auth/guards/local.guard';
-import { Request } from 'express';
-import { User } from '@prisma/client';
 import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
 import { AuthExceptionFilter } from '@app/common/auth/authException/authExceptionFilter';
 import { RefreshTokenDto } from '@app/common/auth/dto/refreshToken.dto';
@@ -29,10 +27,6 @@ import {
 import { CreateAdminDto } from '@app/common/auth/dto/create-admin.dto';
 import { AdminResponseDto } from '@apps/rest/admin/dto/admion-search.dto';
 import { AdminLocalGuard } from '@app/common/auth/guards/admin-local-guard';
-
-interface RequestWithUser extends Request {
-  user: User;
-}
 
 export class LoginDto {
   @ApiProperty()
@@ -81,7 +75,7 @@ export class AuthController {
     type: LoginResponseDto,
   })
   @ApiUnauthorizedResponse({ description: '인증 실패' })
-  async login(@Req() req: RequestWithUser) {
+  async login(@Req() req: any) {
     return await this.authService.login(req.user);
   }
 
