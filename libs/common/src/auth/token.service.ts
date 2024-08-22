@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Admin, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AccessTokenPayloadDto } from '@app/common/auth/dto/accessTokenPayload.dto';
 import { RefreshTokenPayloadDto } from '@app/common/auth/dto/refreshTokenPayload.dto';
+import * as bcryptjs from 'bcryptjs';
 
 @Injectable()
 export class TokenService {
@@ -11,6 +12,8 @@ export class TokenService {
   private readonly refreshTokenSecret: string;
   private readonly accessTokenExpiration: number;
   private readonly refreshTokenExpiration: number;
+  private readonly DEFAULT_REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60; // 7 days in seconds
+
   private readonly logger = new Logger(TokenService.name);
   constructor(
     private readonly jwtService: JwtService,
@@ -54,14 +57,23 @@ export class TokenService {
     });
   }
 
-  async getAdminAccessToken(admin: Admin) {
+  async getAdminAccessToken(user: any) {
     const payload = {
-      userEmail: admin.email,
-      userName: admin.name,
+      userEmail: user.email,
+      userName: user.name,
     };
     return this.jwtService.sign(payload, {
       secret: this.accessTokenSecret,
       expiresIn: this.accessTokenExpiration,
+    });
+  }
+  async getAdminRefreshToken(user: any): Promise<string> {
+    const payload = {
+      userEmail: user.email,
+    };
+    return this.jwtService.sign(payload, {
+      secret: this.refreshTokenSecret,
+      expiresIn: this.refreshTokenExpiration,
     });
   }
   async refresh(refreshToken: string) {
@@ -69,5 +81,16 @@ export class TokenService {
       secret: this.refreshTokenSecret,
     });
     return userEmail;
+  }
+  getRefreshTokenExp(): Date {
+    const now = new Date();
+    const expirationTime =
+      this.configService.get<number>('JWT_REFRESH_EXPIRATION') ||
+      this.DEFAULT_REFRESH_TOKEN_EXPIRATION;
+
+    return new Date(now.getTime() + expirationTime * 1000);
+  }
+  async getHashedRefreshToken(refreshToken: string): Promise<string> {
+    return bcryptjs.hash(refreshToken, 10);
   }
 }

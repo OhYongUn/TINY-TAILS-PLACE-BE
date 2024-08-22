@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { RefreshTokenDto } from './dto/refreshToken.dto';
 import { NewAccessTokenDto } from './dto/newAccessToken.dto';
@@ -15,6 +19,7 @@ import { CreateUserDto } from '@apps/rest/users/dto/CreateUserDto';
 import { UserResponseDto } from '@apps/rest/users/dto/UserResponseDto';
 import { AdminUsersService } from '@apps/rest/admin/services/admin-users.service';
 import { TokenService } from '@app/common/auth/token.service';
+import { CreateAdminDto } from '@app/common/auth/dto/create-admin.dto';
 
 @Injectable()
 export class AuthService {
@@ -95,7 +100,28 @@ export class AuthService {
     return user;
   }
 
-  async adminLogin(user) {
-    return Promise.resolve(undefined);
+  async adminLogin(user: any) {
+    const accessToken: string =
+      await this.tokenService.getAdminAccessToken(user);
+    const refreshToken: string =
+      await this.tokenService.getAdminRefreshToken(user);
+    const currentRefreshToken =
+      await this.tokenService.getHashedRefreshToken(refreshToken);
+    const currentRefreshTokenExp = this.tokenService.getRefreshTokenExp();
+    await this.adminUsersService.updateAdmin(
+      user.email,
+      currentRefreshToken,
+      currentRefreshTokenExp,
+    );
+
+    return { accessToken, refreshToken, user };
+  }
+
+  async adminRegister(createAdminDto: CreateAdminDto) {
+    try {
+      await this.adminUsersService.adminRegister(createAdminDto);
+    } catch (e) {
+      throw new InternalServerErrorException('Failed to update user');
+    }
   }
 }
