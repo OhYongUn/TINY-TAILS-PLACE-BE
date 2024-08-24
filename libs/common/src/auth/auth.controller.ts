@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   HttpCode,
+  HttpException,
   HttpStatus,
   Post,
   Req,
@@ -27,6 +28,7 @@ import {
 import { CreateAdminDto } from '@app/common/auth/dto/create-admin.dto';
 import { AdminResponseDto } from '@apps/rest/admin/dto/admion-search.dto';
 import { AdminLocalGuard } from '@app/common/auth/guards/admin-local-guard';
+import { NewAccessTokenDto } from '@app/common/auth/dto/newAccessToken.dto';
 
 export class LoginDto {
   @ApiProperty()
@@ -40,7 +42,24 @@ export class LoginDto {
 @Controller('auth')
 @UseFilters(AuthExceptionFilter)
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
+
+  @Post('verify-token')
+  @ApiOperation({
+    summary: '토큰 검증',
+  })
+  @ApiBody({ type: NewAccessTokenDto })
+  async verifyToken(@Body() body: { token: string }) {
+    try {
+      const isValid = await this.authService.verifyToken(body.token);
+      return { isValid };
+    } catch (error) {
+      throw new HttpException(
+        'Token verification failed',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+  }
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -79,7 +98,7 @@ export class AuthController {
     return await this.authService.login(req.user);
   }
 
-  @Post('refresh')
+  @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '토큰 갱신',
@@ -115,6 +134,7 @@ export class AuthController {
   async adminLogin(@Req() req: any) {
     return await this.authService.adminLogin(req.user);
   }
+
   @Post('/admin/register')
   @ApiOperation({
     summary: '신규 관리자 등록',

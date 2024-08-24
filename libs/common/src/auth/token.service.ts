@@ -12,6 +12,7 @@ export class TokenService {
   private readonly DEFAULT_REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60; // 7 days in seconds
 
   private readonly logger = new Logger(TokenService.name);
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -33,6 +34,7 @@ export class TokenService {
       86400,
     );
   }
+
   async getAccessToken(user: any): Promise<string> {
     const payload = {
       userEmail: user.email,
@@ -53,12 +55,14 @@ export class TokenService {
       expiresIn: this.refreshTokenExpiration,
     });
   }
+
   async refresh(refreshToken: string) {
     const { userEmail } = this.jwtService.verify(refreshToken, {
       secret: this.refreshTokenSecret,
     });
     return userEmail;
   }
+
   getRefreshTokenExp(): Date {
     const now = new Date();
     const expirationTime =
@@ -67,7 +71,17 @@ export class TokenService {
 
     return new Date(now.getTime() + expirationTime * 1000);
   }
+
   async getHashedRefreshToken(refreshToken: string): Promise<string> {
     return bcryptjs.hash(refreshToken, 10);
+  }
+
+  async verifyToken(token: string): Promise<boolean> {
+    try {
+      await this.jwtService.verifyAsync(token);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

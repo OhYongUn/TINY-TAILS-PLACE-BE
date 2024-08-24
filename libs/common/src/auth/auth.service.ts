@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { RefreshTokenDto } from './dto/refreshToken.dto';
-import { NewAccessTokenDto } from './dto/newAccessToken.dto';
 import { User } from '@prisma/client';
 import { LoginResponseDto } from '@app/common/auth/dto/LoginResponseDto';
 import {
@@ -72,7 +71,7 @@ export class AuthService {
     return { accessToken, refreshToken, user: userResponseDto };
   }
 
-  async refresh(refreshTokenDto: RefreshTokenDto): Promise<NewAccessTokenDto> {
+  async refresh(refreshTokenDto: RefreshTokenDto) {
     const { refreshToken } = refreshTokenDto;
     try {
       const userEmail = await this.tokenService.refresh(refreshToken);
@@ -81,8 +80,16 @@ export class AuthService {
         userEmail,
         refreshToken,
       );
-      const accessToken = await this.tokenService.getAccessToken(user);
-      return { accessToken };
+      const newAccessToken = await this.tokenService.getAccessToken(user);
+      const newRefreshToken = await this.tokenService.getRefreshToken(user);
+      const newRefreshTokenExp = this.tokenService.getRefreshTokenExp();
+
+      await this.usersService.updateUser(
+        user.email,
+        newRefreshToken,
+        newRefreshTokenExp,
+      );
+      return { newAccessToken, newRefreshToken };
     } catch (error) {
       throw new InvalidTokenException();
     }
@@ -128,5 +135,9 @@ export class AuthService {
     } catch (e) {
       throw new InternalServerErrorException('Failed to update user');
     }
+  }
+
+  async verifyToken(token: string): Promise<boolean> {
+    return this.tokenService.verifyToken(token);
   }
 }
