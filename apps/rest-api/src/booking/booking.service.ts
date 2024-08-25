@@ -222,7 +222,11 @@ export class BookingService {
         skip: skip,
         take: pageSize,
         include: {
-          roomDetail: true,
+          roomDetail: {
+            include: {
+              room: true, // roomDetail에서 room 정보를 함께 가져옵니다.
+            },
+          },
           bookingDetails: true,
         },
       }),
