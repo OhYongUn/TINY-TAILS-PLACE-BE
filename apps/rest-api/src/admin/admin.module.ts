@@ -4,6 +4,7 @@ import { AdminBookingsController } from '@apps/rest/admin/controllers/admin-book
 import { AdminRolesController } from '@apps/rest/admin/controllers/admin-roles.controller';
 import { AdminRolesService } from '@apps/rest/admin/services/admin-roles.service';
 import { AdminUsersService } from '@apps/rest/admin/services/admin-users.service';
+import { AdminBookingsService } from '@apps/rest/admin/services/admin-bookings.service';
 
 @Module({
   controllers: [
@@ -11,7 +12,7 @@ import { AdminUsersService } from '@apps/rest/admin/services/admin-users.service
     AdminBookingsController,
     AdminRolesController,
   ],
-  providers: [AdminUsersService, AdminRolesService],
-  exports: [AdminRolesService,AdminUsersService],
+  providers: [AdminUsersService, AdminRolesService, AdminBookingsService],
+  exports: [AdminRolesService, AdminUsersService],
 })
 export class AdminModule {}
