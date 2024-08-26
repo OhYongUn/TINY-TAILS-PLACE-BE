@@ -12,6 +12,7 @@ import { UsersModule } from '@apps/rest/users/users.module';
 import { AdminModule } from '@apps/rest/admin/admin.module';
 import { TokenService } from '@app/common/auth/token.service';
 import { AdminLocalStrategy } from '@app/common/auth/strategies/admin-local.strategy';
+import { AdminAccessTokenStrategy } from '@app/common/auth/strategies/admin-access-token.strategy';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AdminLocalStrategy } from '@app/common/auth/strategies/admin-local.stra
     RefreshTokenStrategy,
     AdminLocalStrategy,
     TokenService,
+    AdminAccessTokenStrategy,
     {
       provide: 'APP_FILTER',
       useClass: AuthExceptionFilter,

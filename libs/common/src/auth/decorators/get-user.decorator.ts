@@ -1,14 +1,12 @@
+// auth/decorators/get-user.decorator.ts
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { User } from '@prisma/client'; // Prisma를 사용하는 경우
 
 export const GetUser = createParamDecorator(
-  (
-    data: keyof User | undefined,
-    ctx: ExecutionContext,
-  ): User | Partial<User> => {
+  (data: string | undefined, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
-    const user = request.user;
-
-    return data ? user?.[data] : user;
+    if (data) {
+      return request.user[data];
+    }
+    return request.user;
   },
 );
