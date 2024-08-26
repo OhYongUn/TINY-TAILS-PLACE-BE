@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   eachDayOfInterval,
   endOfMonth,
@@ -13,6 +13,7 @@ import {
   RoomStatusResponseDto,
 } from '@apps/rest/admin/dto/booking/room-status-response.dto';
 import { BookingStatus } from '@prisma/client';
+import { ReservationDetailResponseDto } from '@apps/rest/admin/dto/reservation-detail-response.dto';
 
 @Injectable()
 export class AdminBookingsService {
@@ -91,6 +92,92 @@ export class AdminBookingsService {
       year,
       month,
       rooms,
+    };
+  }
+
+  async getReservationDetail(
+    bookingId: string,
+  ): Promise<ReservationDetailResponseDto> {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        user: true,
+        roomDetail: {
+          include: {
+            room: true,
+          },
+        },
+        bookingDetails: true,
+        statusHistories: true,
+        payments: true,
+        AdditionalFee: true,
+        refunds: true,
+      },
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID ${bookingId} not found`);
+    }
+
+    return {
+      success: true,
+      statusCode: 200,
+      data: {
+        id: booking.id,
+        userId: booking.userId,
+        roomNumber: booking.roomDetail.roomNumber,
+        roomName: booking.roomDetail.room.name,
+        checkInDate: booking.checkInDate.toISOString(),
+        checkOutDate: booking.checkOutDate.toISOString(),
+        basePrice: booking.basePrice,
+        totalPrice: booking.totalPrice,
+        status: booking.status,
+        cancellationDate: booking.cancellationDate
+          ? booking.cancellationDate.toISOString()
+          : null,
+        cancellationFee: booking.cancellationFee ?? null,
+        createdAt: booking.createdAt.toISOString(),
+        updatedAt: booking.updatedAt.toISOString(),
+        user: {
+          id: booking.user.id,
+          name: booking.user.name,
+          email: booking.user.email,
+        },
+        bookingDetails: booking.bookingDetails
+          ? {
+              petCount: booking.bookingDetails.petCount,
+              request: booking.bookingDetails.request,
+              requestedLateCheckout:
+                booking.bookingDetails.requestedLateCheckout,
+              requestedEarlyCheckin:
+                booking.bookingDetails.requestedEarlyCheckin,
+              actualLateCheckout: booking.bookingDetails.actualLateCheckout,
+              actualEarlyCheckin: booking.bookingDetails.actualEarlyCheckin,
+            }
+          : null,
+        statusHistories: booking.statusHistories.map((history) => ({
+          status: history.status,
+          reason: history.reason,
+          createdAt: history.createdAt.toISOString(),
+        })),
+        payments: booking.payments.map((payment) => ({
+          id: payment.id,
+          amount: payment.amount,
+          status: payment.status,
+          method: payment.method,
+          type: payment.type,
+          transactionId: payment.transactionId,
+          createdAt: payment.createdAt.toISOString(),
+        })),
+        additionalFees: booking.AdditionalFee.map((fee) => ({
+          feeType: fee.feeType,
+          amount: fee.amount,
+          description: fee.description,
+          createdAt: fee.createdAt.toISOString(),
+        })),
+        // refunds 정보도 필요하다면 여기에 추가
+      },
+      error: null,
     };
   }
 }

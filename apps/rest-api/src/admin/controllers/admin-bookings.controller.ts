@@ -1,7 +1,14 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { AdminBookingsService } from '@apps/rest/admin/services/admin-bookings.service';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { RoomStatusResponseDto } from '@apps/rest/admin/dto/booking/room-status-response.dto';
+import { ReservationDetailResponseDto } from '@apps/rest/admin/dto/reservation-detail-response.dto';
 
 @ApiTags('admin-bookings')
 @Controller('admin-bookings')
@@ -23,5 +30,20 @@ export class AdminBookingsController {
     @Query('month') month: number,
   ): Promise<RoomStatusResponseDto> {
     return this.adminBookingsService.getReservations(year, month);
+  }
+
+  @Get('reservation-detail/:bookingId')
+  @ApiOperation({ summary: 'Get detailed reservation information' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reservation details retrieved successfully',
+    type: ReservationDetailResponseDto,
+  })
+  @ApiParam({ name: 'bookingId', required: true, type: String })
+  //@UseGuards(AdminAccessTokenGuard)
+  async getReservationDetail(
+    @Param('bookingId') bookingId: string,
+  ): Promise<ReservationDetailResponseDto> {
+    return this.adminBookingsService.getReservationDetail(bookingId);
   }
 }
