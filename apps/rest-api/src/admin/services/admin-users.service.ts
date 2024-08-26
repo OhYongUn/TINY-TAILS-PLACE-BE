@@ -17,6 +17,14 @@ export class AdminUsersService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  async getAdminByEmail(email: string) {
+    return this.getAdmin({ email });
+  }
+
+  async getAdminById(id: string) {
+    return this.getAdmin({ id });
+  }
+
   async getAdmin(filter: Prisma.AdminWhereUniqueInput): Promise<Admin> {
     this.logger.log(`사용자 검색 시도: ${JSON.stringify(filter)}`);
     const admin = await this.prisma.admin.findUnique({ where: filter });
@@ -92,8 +100,8 @@ export class AdminUsersService {
 
   async updateAdmin(
     email: string,
-    currentRefreshToken: string,
-    currentRefreshTokenExp: Date,
+    currentRefreshToken: string | null,
+    currentRefreshTokenExp: Date | null,
   ) {
     if (!email) {
       throw new BadRequestException('Email is required to update user');

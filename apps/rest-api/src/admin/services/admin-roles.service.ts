@@ -11,6 +11,7 @@ import { AssignRoleDto } from '@apps/rest/admin/dto/roles/assign-role.dto';
 @Injectable()
 export class AdminRolesService {
   constructor(private prisma: PrismaService) {}
+
   async createRole(createRoleDto: CreateRoleDto) {
     const { name, description, permissionIds } = createRoleDto;
     const existingRole = await this.prisma.role.findUnique({ where: { name } });
@@ -147,5 +148,44 @@ export class AdminRolesService {
 
   async getAllPermissions() {
     return this.prisma.permission.findMany();
+  }
+
+  async getRolesByAdminId(adminId: string) {
+    const adminRoles = await this.prisma.adminRole.findMany({
+      where: { adminId: adminId },
+      include: {
+        role: {
+          include: {
+            rolePermissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!adminRoles.length) {
+      return []; // 관리자에게 할당된 역할이 없는 경우
+    }
+
+    // 결과를 가공하여 원하는 형태로 반환
+    return adminRoles.map((adminRole) => {
+      const role = adminRole.role;
+      const permissions = role.rolePermissions.map((rp) => ({
+        id: rp.permission.id,
+        name: rp.permission.name,
+        resource: rp.permission.resource,
+        action: rp.permission.action,
+      }));
+
+      return {
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        permissions: permissions,
+      };
+    });
   }
 }

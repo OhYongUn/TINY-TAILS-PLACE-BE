@@ -19,6 +19,7 @@ import { UserResponseDto } from '@apps/rest/users/dto/UserResponseDto';
 import { AdminUsersService } from '@apps/rest/admin/services/admin-users.service';
 import { TokenService } from '@app/common/auth/token.service';
 import { CreateAdminDto } from '@app/common/auth/dto/create-admin.dto';
+import { AdminRolesService } from '@apps/rest/admin/services/admin-roles.service';
 
 @Injectable()
 export class AuthService {
@@ -28,6 +29,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly adminUsersService: AdminUsersService,
     private readonly tokenService: TokenService,
+    private readonly adminRolesService: AdminRolesService,
   ) {}
 
   async register(createUserDto: CreateUserDto): Promise<void> {
@@ -120,13 +122,14 @@ export class AuthService {
     const currentRefreshToken =
       await this.tokenService.getHashedRefreshToken(refreshToken);
     const currentRefreshTokenExp = this.tokenService.getRefreshTokenExp();
+    const roles = this.adminRolesService.getRolesByAdminId(user.id);
     await this.adminUsersService.updateAdmin(
       user.email,
       currentRefreshToken,
       currentRefreshTokenExp,
     );
 
-    return { accessToken, refreshToken, user };
+    return { accessToken, refreshToken, user: user, roles };
   }
 
   async adminRegister(createAdminDto: CreateAdminDto) {
@@ -139,5 +142,25 @@ export class AuthService {
 
   async verifyToken(token: string): Promise<boolean> {
     return this.tokenService.verifyToken(token);
+  }
+
+  async getAdminByEmail(email: string) {
+    console.log('email', email);
+    const admin = await this.adminUsersService.getAdminByEmail(email);
+
+    return admin;
+  }
+
+  async adminLogout(email: string): Promise<void> {
+    if (!email) {
+      throw new UserNotFoundException();
+    }
+    const currentRefreshToken = null;
+    const currentRefreshTokenExp = null;
+    await this.adminUsersService.updateAdmin(
+      email,
+      currentRefreshToken,
+      currentRefreshTokenExp,
+    );
   }
 }

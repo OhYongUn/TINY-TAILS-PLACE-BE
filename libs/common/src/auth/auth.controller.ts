@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpException,
   HttpStatus,
@@ -29,6 +30,9 @@ import { CreateAdminDto } from '@app/common/auth/dto/create-admin.dto';
 import { AdminResponseDto } from '@apps/rest/admin/dto/admion-search.dto';
 import { AdminLocalGuard } from '@app/common/auth/guards/admin-local-guard';
 import { NewAccessTokenDto } from '@app/common/auth/dto/newAccessToken.dto';
+import { AdminAccessTokenGuard } from '@app/common/auth/guards/admin-access-token.guard';
+import { Admin } from '@prisma/client';
+import { GetUser } from '@app/common/auth/decorators/get-user.decorator';
 
 export class LoginDto {
   @ApiProperty()
@@ -154,6 +158,31 @@ export class AuthController {
       data: null,
       message: '회원가입이 성공적으로 완료되었습니다.',
       statusCode: HttpStatus.CREATED,
+    };
+  }
+
+  @Get('admin')
+  @UseGuards(AdminAccessTokenGuard)
+  @ApiOperation({ summary: 'Get admin' })
+  async getAdminInfo(@GetUser() admin: Admin) {
+    console.log('getAdminByEmail');
+    return admin;
+  }
+
+  @Post('admin/logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '로그아웃', description: '관리자 로그아웃 처리' })
+  @ApiSwaggerResponse({ status: 200, description: '로그아웃 성공' })
+  @ApiBadRequestResponse({ description: '이메일 누락' })
+  @ApiUnauthorizedResponse({ description: '사용자를 찾을 수 없음' })
+  @ApiBody({ schema: { properties: { email: { type: 'string' } } } })
+  @UseGuards(AdminAccessTokenGuard)
+  async logout(@GetUser() admin: Admin) {
+    await this.authService.adminLogout(admin.email);
+    return {
+      data: null,
+      message: '로그아웃 성공',
+      statusCode: HttpStatus.OK, // 명시적으로 200 상태 코드 지정
     };
   }
 }
