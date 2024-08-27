@@ -16,6 +16,8 @@ class UserDto {
 
   @ApiProperty()
   email: string;
+  @ApiProperty()
+  phone: string;
 }
 
 class BookingDetailsDto {
@@ -70,6 +72,8 @@ class PaymentDto {
 
   @ApiProperty()
   createdAt: string;
+  @ApiProperty()
+  updatedAt: string;
 }
 
 class AdditionalFeeDto {

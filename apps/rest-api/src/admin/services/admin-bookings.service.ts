@@ -142,6 +142,7 @@ export class AdminBookingsService {
           id: booking.user.id,
           name: booking.user.name,
           email: booking.user.email,
+          phone: booking.user.phone,
         },
         bookingDetails: booking.bookingDetails
           ? {
@@ -168,6 +169,7 @@ export class AdminBookingsService {
           type: payment.type,
           transactionId: payment.transactionId,
           createdAt: payment.createdAt.toISOString(),
+          updatedAt: payment.updatedAt.toISOString(),
         })),
         additionalFees: booking.AdditionalFee.map((fee) => ({
           feeType: fee.feeType,
