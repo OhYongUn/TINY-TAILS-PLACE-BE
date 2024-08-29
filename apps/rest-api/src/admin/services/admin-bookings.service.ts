@@ -12,8 +12,9 @@ import {
   RoomStatusDto,
   RoomStatusResponseDto,
 } from '@apps/rest/admin/dto/booking/room-status-response.dto';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, Prisma } from '@prisma/client';
 import { ReservationDetailResponseDto } from '@apps/rest/admin/dto/reservation-detail-response.dto';
+import { GetBookingsDto } from '@apps/rest/admin/dto/booking/get-bookings.dto';
 
 @Injectable()
 export class AdminBookingsService {
@@ -180,6 +181,92 @@ export class AdminBookingsService {
         // refunds 정보도 필요하다면 여기에 추가
       },
       error: null,
+    };
+  }
+
+  async getBookings(params: GetBookingsDto) {
+    console.log('params', params);
+    const {
+      fromDate,
+      toDate,
+      searchOption,
+      searchQuery,
+      sortOption,
+      status,
+      page = 1,
+      pageSize = 10,
+    } = params;
+
+    const where: Prisma.BookingWhereInput = {
+      AND: [
+        { status: { not: BookingStatus.PENDING } },
+        status ? { status } : {},
+      ],
+    };
+
+    if (fromDate && toDate) {
+      where.checkInDate = { gte: new Date(fromDate) };
+      where.checkOutDate = { lte: new Date(toDate) };
+    }
+
+    if (searchOption && searchQuery) {
+      switch (searchOption) {
+        case 'userName':
+          where.user = { name: { contains: searchQuery } };
+          break;
+        case 'phone':
+          where.user = { phone: { contains: searchQuery } };
+          break;
+        case 'roomNumber':
+          where.roomDetail = { roomNumber: { contains: searchQuery } };
+          break;
+      }
+    }
+
+    let orderBy: Prisma.BookingOrderByWithRelationInput = { createdAt: 'desc' };
+
+    if (sortOption) {
+      const [field, direction] = sortOption.split('_') as [
+        string,
+        Prisma.SortOrder,
+      ];
+      if (field === 'roomNumber') {
+        orderBy = { roomDetail: { roomNumber: direction } };
+      } else if (field in Prisma.BookingScalarFieldEnum) {
+        orderBy = { [field]: direction };
+      }
+    }
+
+    const totalCount = await this.prisma.booking.count({ where });
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    const bookings = await this.prisma.booking.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
+        roomDetail: {
+          select: {
+            id: true,
+            roomNumber: true,
+          },
+        },
+      },
+    });
+
+    return {
+      bookings,
+      totalPages,
+      currentPage: page,
+      totalCount,
     };
   }
 }
