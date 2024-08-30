@@ -1,6 +1,7 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { AdminBookingsService } from '@apps/rest/admin/services/admin-bookings.service';
 import {
+  ApiBody,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -12,6 +13,7 @@ import { ReservationDetailResponseDto } from '@apps/rest/admin/dto/reservation-d
 import { GetBookingsDto } from '@apps/rest/admin/dto/booking/get-bookings.dto';
 import { BookingStatus } from '@prisma/client';
 import { ReservationDetailType } from '@apps/rest/admin/types/type';
+import { UpdateBookingStatusDto } from '@apps/rest/admin/dto/booking/update-booking-status.dto';
 
 @ApiTags('admin-bookings')
 @Controller('admin-bookings')
@@ -54,7 +56,7 @@ export class AdminBookingsController {
     @Query('year') year: number,
     @Query('month') month: number,
   ): Promise<RoomStatusResponseDto> {
-    return this.adminBookingsService.getReservations(year, month);
+    return await this.adminBookingsService.getReservations(year, month);
   }
 
   @Get('reservation-detail/:bookingId')
@@ -85,6 +87,27 @@ export class AdminBookingsController {
     @Param('bookingId') bookingId: string,
     @Query('types') types?: Array<'all' | ReservationDetailType>,
   ): Promise<ReservationDetailResponseDto> {
-    return this.adminBookingsService.getReservationDetail(bookingId, types);
+    return await this.adminBookingsService.getReservationDetail(
+      bookingId,
+      types,
+    );
+  }
+
+  @Patch(':bookingId/status')
+  @ApiOperation({ summary: '예약 상태 업데이트' })
+  @ApiResponse({
+    status: 200,
+    description: '예약 상태가 성공적으로 업데이트되었습니다.',
+  })
+  @ApiParam({ name: 'bookingId', required: true, type: String })
+  @ApiBody({ type: UpdateBookingStatusDto })
+  async updateBookingStatus(
+    @Param('bookingId') bookingId: string,
+    @Body() updateStatusDto: UpdateBookingStatusDto,
+  ) {
+    return this.adminBookingsService.updateBookingStatus(
+      bookingId,
+      updateStatusDto,
+    );
   }
 }

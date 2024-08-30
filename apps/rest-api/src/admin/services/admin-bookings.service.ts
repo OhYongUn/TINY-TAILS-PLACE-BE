@@ -16,6 +16,7 @@ import { BookingStatus, Prisma } from '@prisma/client';
 import { ReservationDetailResponseDto } from '@apps/rest/admin/dto/reservation-detail-response.dto';
 import { ReservationDetailType } from '@apps/rest/admin/types/type';
 import { GetBookingsDto } from '@apps/rest/admin/dto/booking/get-bookings.dto';
+import { UpdateBookingStatusDto } from '@apps/rest/admin/dto/booking/update-booking-status.dto';
 
 @Injectable()
 export class AdminBookingsService {
@@ -326,6 +327,43 @@ export class AdminBookingsService {
       id: booking.roomDetail.id,
       roomNumber: booking.roomDetail.roomNumber,
       roomName: booking.roomDetail.room.name,
+    };
+  }
+
+  async updateBookingStatus(
+    bookingId: string,
+    updateStatusDto: UpdateBookingStatusDto,
+  ) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID ${bookingId} not found`);
+    }
+
+    // Update booking status
+    const updatedBooking = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: updateStatusDto.status },
+    });
+
+    // Create status history
+    await this.prisma.bookingStatusHistory.create({
+      data: {
+        bookingId: bookingId,
+        status: updateStatusDto.status,
+        reason: updateStatusDto.reason,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Booking status updated successfully',
+      data: {
+        id: updatedBooking.id,
+        status: updatedBooking.status,
+      },
     };
   }
 }
