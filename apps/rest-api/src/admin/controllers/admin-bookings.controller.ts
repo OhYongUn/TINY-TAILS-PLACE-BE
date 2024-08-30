@@ -11,6 +11,7 @@ import { RoomStatusResponseDto } from '@apps/rest/admin/dto/booking/room-status-
 import { ReservationDetailResponseDto } from '@apps/rest/admin/dto/reservation-detail-response.dto';
 import { GetBookingsDto } from '@apps/rest/admin/dto/booking/get-bookings.dto';
 import { BookingStatus } from '@prisma/client';
+import { ReservationDetailType } from '@apps/rest/admin/types/type';
 
 @ApiTags('admin-bookings')
 @Controller('admin-bookings')
@@ -40,7 +41,7 @@ export class AdminBookingsController {
   }
 
   @Get('reservation-status')
-  @ApiOperation({ summary: 'Get room status for a specific month' })
+  @ApiOperation({ summary: '특정 달의 객실 상태 확인' })
   @ApiResponse({
     status: 200,
     description: 'Room status retrieved successfully',
@@ -57,17 +58,33 @@ export class AdminBookingsController {
   }
 
   @Get('reservation-detail/:bookingId')
-  @ApiOperation({ summary: 'Get detailed reservation information' })
+  @ApiOperation({ summary: '상세 예약정보' })
   @ApiResponse({
     status: 200,
-    description: 'Reservation details retrieved successfully',
+    description: '예약 세부정보가 성공적으로 검색되었습니다.',
     type: ReservationDetailResponseDto,
   })
   @ApiParam({ name: 'bookingId', required: true, type: String })
-  //@UseGuards(AdminAccessTokenGuard)
+  @ApiQuery({
+    name: 'types',
+    required: false,
+    isArray: true,
+    enum: [
+      'all',
+      'bookingDetails',
+      'statusHistories',
+      'payments',
+      'additionalFees',
+      'user',
+      'roomDetail',
+    ],
+    description:
+      "검색할 정보 유형을 지정합니다. 모든 정보를 얻으려면 'all'을 사용하세요..",
+  })
   async getReservationDetail(
     @Param('bookingId') bookingId: string,
+    @Query('types') types?: Array<'all' | ReservationDetailType>,
   ): Promise<ReservationDetailResponseDto> {
-    return this.adminBookingsService.getReservationDetail(bookingId);
+    return this.adminBookingsService.getReservationDetail(bookingId, types);
   }
 }

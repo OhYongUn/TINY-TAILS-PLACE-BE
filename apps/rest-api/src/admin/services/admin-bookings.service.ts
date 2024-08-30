@@ -14,6 +14,7 @@ import {
 } from '@apps/rest/admin/dto/booking/room-status-response.dto';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { ReservationDetailResponseDto } from '@apps/rest/admin/dto/reservation-detail-response.dto';
+import { ReservationDetailType } from '@apps/rest/admin/types/type';
 import { GetBookingsDto } from '@apps/rest/admin/dto/booking/get-bookings.dto';
 
 @Injectable()
@@ -95,95 +96,6 @@ export class AdminBookingsService {
       rooms,
     };
   }
-
-  async getReservationDetail(
-    bookingId: string,
-  ): Promise<ReservationDetailResponseDto> {
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: {
-        user: true,
-        roomDetail: {
-          include: {
-            room: true,
-          },
-        },
-        bookingDetails: true,
-        statusHistories: true,
-        payments: true,
-        AdditionalFee: true,
-        refunds: true,
-      },
-    });
-
-    if (!booking) {
-      throw new NotFoundException(`Booking with ID ${bookingId} not found`);
-    }
-
-    return {
-      success: true,
-      statusCode: 200,
-      data: {
-        id: booking.id,
-        userId: booking.userId,
-        roomNumber: booking.roomDetail.roomNumber,
-        roomName: booking.roomDetail.room.name,
-        checkInDate: booking.checkInDate.toISOString(),
-        checkOutDate: booking.checkOutDate.toISOString(),
-        basePrice: booking.basePrice,
-        totalPrice: booking.totalPrice,
-        status: booking.status,
-        cancellationDate: booking.cancellationDate
-          ? booking.cancellationDate.toISOString()
-          : null,
-        cancellationFee: booking.cancellationFee ?? null,
-        createdAt: booking.createdAt.toISOString(),
-        updatedAt: booking.updatedAt.toISOString(),
-        user: {
-          id: booking.user.id,
-          name: booking.user.name,
-          email: booking.user.email,
-          phone: booking.user.phone,
-        },
-        bookingDetails: booking.bookingDetails
-          ? {
-              petCount: booking.bookingDetails.petCount,
-              request: booking.bookingDetails.request,
-              requestedLateCheckout:
-                booking.bookingDetails.requestedLateCheckout,
-              requestedEarlyCheckin:
-                booking.bookingDetails.requestedEarlyCheckin,
-              actualLateCheckout: booking.bookingDetails.actualLateCheckout,
-              actualEarlyCheckin: booking.bookingDetails.actualEarlyCheckin,
-            }
-          : null,
-        statusHistories: booking.statusHistories.map((history) => ({
-          status: history.status,
-          reason: history.reason,
-          createdAt: history.createdAt.toISOString(),
-        })),
-        payments: booking.payments.map((payment) => ({
-          id: payment.id,
-          amount: payment.amount,
-          status: payment.status,
-          method: payment.method,
-          type: payment.type,
-          transactionId: payment.transactionId,
-          createdAt: payment.createdAt.toISOString(),
-          updatedAt: payment.updatedAt.toISOString(),
-        })),
-        additionalFees: booking.AdditionalFee.map((fee) => ({
-          feeType: fee.feeType,
-          amount: fee.amount,
-          description: fee.description,
-          createdAt: fee.createdAt.toISOString(),
-        })),
-        // refunds 정보도 필요하다면 여기에 추가
-      },
-      error: null,
-    };
-  }
-
   async getBookings(params: GetBookingsDto) {
     console.log('params', params);
     const {
@@ -267,6 +179,153 @@ export class AdminBookingsService {
       totalPages,
       currentPage: page,
       totalCount,
+    };
+  }
+
+  async getReservationDetail(
+    bookingId: string,
+    types?: Array<'all' | ReservationDetailType>,
+  ): Promise<ReservationDetailResponseDto> {
+    const shouldIncludeAll = types?.includes('all');
+    const typesToInclude = new Set<ReservationDetailType>(
+      shouldIncludeAll
+        ? [
+            'bookingDetails',
+            'statusHistories',
+            'payments',
+            'additionalFees',
+            'user',
+            'roomDetail',
+          ]
+        : (types || []).filter(
+            (type): type is ReservationDetailType => type !== 'all',
+          ),
+    );
+
+    const booking = await this.getBooking(bookingId, typesToInclude);
+
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID ${bookingId} not found`);
+    }
+
+    const responseData: any = {
+      base: this.getBaseDetails(booking),
+    };
+
+    if (typesToInclude.has('bookingDetails') && booking.bookingDetails) {
+      responseData.bookingDetails = this.getBookingDetails(booking);
+    }
+
+    if (typesToInclude.has('statusHistories')) {
+      responseData.statusHistories = this.getStatusHistories(booking);
+    }
+
+    if (typesToInclude.has('payments')) {
+      responseData.payments = this.getPayments(booking);
+      responseData.refunds = this.getRefunds(booking);
+    }
+
+    if (typesToInclude.has('additionalFees')) {
+      responseData.additionalFees = this.getAdditionalFees(booking);
+    }
+
+    if (typesToInclude.has('user')) {
+      responseData.user = this.getUser(booking);
+    }
+
+    if (typesToInclude.has('roomDetail')) {
+      responseData.roomDetail = this.getRoomDetail(booking);
+    }
+
+    return {
+      success: true,
+      statusCode: 200,
+      data: responseData,
+      error: null,
+    };
+  }
+
+  private async getBooking(bookingId: string, typesToInclude: Set<string>) {
+    return this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        user: typesToInclude.has('user'),
+        roomDetail: typesToInclude.has('roomDetail')
+          ? {
+              include: { room: true },
+            }
+          : false,
+        bookingDetails: typesToInclude.has('bookingDetails'),
+        statusHistories: typesToInclude.has('statusHistories'),
+        payments: typesToInclude.has('payments'),
+        AdditionalFee: typesToInclude.has('additionalFees'),
+        refunds: typesToInclude.has('payments'),
+      },
+    });
+  }
+
+  private getBaseDetails(booking: any) {
+    return {
+      id: booking.id,
+      userId: booking.userId,
+      roomDetailId: booking.roomDetailId,
+      checkInDate: booking.checkInDate.toISOString(),
+      checkOutDate: booking.checkOutDate.toISOString(),
+      basePrice: booking.basePrice,
+      totalPrice: booking.totalPrice,
+      status: booking.status,
+      cancellationDate: booking.cancellationDate
+        ? booking.cancellationDate.toISOString()
+        : null,
+      cancellationFee: booking.cancellationFee,
+      additionalFees: booking.additionalFees,
+      createdAt: booking.createdAt.toISOString(),
+      updatedAt: booking.updatedAt.toISOString(),
+    };
+  }
+
+  private getBookingDetails(booking: any) {
+    return booking.bookingDetails;
+  }
+
+  private getStatusHistories(booking: any) {
+    return booking.statusHistories.map((history: any) => ({
+      ...history,
+      createdAt: history.createdAt.toISOString(),
+    }));
+  }
+
+  private getPayments(booking: any) {
+    return booking.payments.map((payment: any) => ({
+      ...payment,
+      createdAt: payment.createdAt.toISOString(),
+      updatedAt: payment.updatedAt.toISOString(),
+    }));
+  }
+
+  private getRefunds(booking: any) {
+    return booking.refunds.map((refund: any) => ({
+      ...refund,
+      createdAt: refund.createdAt.toISOString(),
+    }));
+  }
+
+  private getAdditionalFees(booking: any) {
+    return booking.AdditionalFee.map((fee: any) => ({
+      ...fee,
+      createdAt: fee.createdAt.toISOString(),
+    }));
+  }
+
+  private getUser(booking: any) {
+    return booking.user;
+  }
+
+  private getRoomDetail(booking: any) {
+    return {
+      id: booking.roomDetail.id,
+      roomNumber: booking.roomDetail.roomNumber,
+      roomName: booking.roomDetail.room.name,
     };
   }
 }
