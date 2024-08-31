@@ -16,11 +16,24 @@ class UserDto {
 
   @ApiProperty()
   email: string;
+
   @ApiProperty()
   phone: string;
+
+  @ApiProperty()
+  createdAt: string;
+
+  @ApiProperty()
+  updatedAt: string;
 }
 
 class BookingDetailsDto {
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty()
+  bookingId: string;
+
   @ApiProperty()
   petCount: number;
 
@@ -41,6 +54,12 @@ class BookingDetailsDto {
 }
 
 class StatusHistoryDto {
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty()
+  bookingId: string;
+
   @ApiProperty({ enum: BookingStatus })
   status: BookingStatus;
 
@@ -51,46 +70,7 @@ class StatusHistoryDto {
   createdAt: string;
 }
 
-class PaymentDto {
-  @ApiProperty()
-  id: string;
-
-  @ApiProperty()
-  amount: number;
-
-  @ApiProperty({ enum: PaymentStatus })
-  status: PaymentStatus;
-
-  @ApiProperty({ enum: PaymentMethod })
-  method: PaymentMethod;
-
-  @ApiProperty({ enum: PaymentType })
-  type: PaymentType;
-
-  @ApiProperty({ required: false, nullable: true })
-  transactionId: string | null;
-
-  @ApiProperty()
-  createdAt: string;
-  @ApiProperty()
-  updatedAt: string;
-}
-
-class AdditionalFeeDto {
-  @ApiProperty({ enum: FeeType })
-  feeType: FeeType;
-
-  @ApiProperty()
-  amount: number;
-
-  @ApiProperty({ required: false, nullable: true })
-  description: string | null;
-
-  @ApiProperty()
-  createdAt: string;
-}
-
-export class ReservationDetailDto {
+class BaseDto {
   @ApiProperty()
   id: string;
 
@@ -98,10 +78,7 @@ export class ReservationDetailDto {
   userId: number;
 
   @ApiProperty()
-  roomNumber: string;
-
-  @ApiProperty()
-  roomName: string;
+  roomDetailId: number;
 
   @ApiProperty()
   checkInDate: string;
@@ -125,13 +102,75 @@ export class ReservationDetailDto {
   cancellationFee: number | null;
 
   @ApiProperty()
+  additionalFees: number;
+
+  @ApiProperty()
   createdAt: string;
 
   @ApiProperty()
   updatedAt: string;
+}
+
+class PaymentDto {
+  @ApiProperty()
+  id: string;
 
   @ApiProperty()
-  user: UserDto;
+  amount: number;
+
+  @ApiProperty({ enum: PaymentStatus })
+  status: PaymentStatus;
+
+  @ApiProperty({ enum: PaymentMethod })
+  method: PaymentMethod;
+
+  @ApiProperty({ enum: PaymentType })
+  type: PaymentType;
+
+  @ApiProperty()
+  bookingId: string;
+
+  @ApiProperty({ required: false, nullable: true })
+  orderId: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  transactionId: string | null;
+
+  @ApiProperty()
+  createdAt: string;
+
+  @ApiProperty()
+  updatedAt: string;
+}
+
+class AdditionalFeeDto {
+  @ApiProperty({ enum: FeeType })
+  feeType: FeeType;
+
+  @ApiProperty()
+  amount: number;
+
+  @ApiProperty({ required: false, nullable: true })
+  description: string | null;
+
+  @ApiProperty()
+  createdAt: string;
+}
+
+class RoomDetailDto {
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty()
+  roomNumber: string;
+
+  @ApiProperty()
+  roomName: string;
+}
+
+export class ReservationDetailDto {
+  @ApiProperty()
+  base: BaseDto;
 
   @ApiProperty({ required: false, nullable: true })
   bookingDetails: BookingDetailsDto | null;
@@ -142,8 +181,17 @@ export class ReservationDetailDto {
   @ApiProperty({ type: [PaymentDto] })
   payments: PaymentDto[];
 
+  @ApiProperty({ type: [PaymentDto] })
+  refunds: PaymentDto[];
+
   @ApiProperty({ type: [AdditionalFeeDto] })
   additionalFees: AdditionalFeeDto[];
+
+  @ApiProperty()
+  user: UserDto;
+
+  @ApiProperty()
+  roomDetail: RoomDetailDto;
 }
 
 export class ReservationDetailResponseDto {
