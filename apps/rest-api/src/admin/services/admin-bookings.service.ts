@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   eachDayOfInterval,
   endOfMonth,
@@ -17,6 +21,7 @@ import { ReservationDetailResponseDto } from '@apps/rest/admin/dto/reservation-d
 import { ReservationDetailType } from '@apps/rest/admin/types/type';
 import { GetBookingsDto } from '@apps/rest/admin/dto/booking/get-bookings.dto';
 import { UpdateBookingStatusDto } from '@apps/rest/admin/dto/booking/update-booking-status.dto';
+import { UpdateBookingOptionDto } from '@apps/rest/admin/dto/booking/update-booking-option.dto';
 
 @Injectable()
 export class AdminBookingsService {
@@ -97,6 +102,7 @@ export class AdminBookingsService {
       rooms,
     };
   }
+
   async getBookings(params: GetBookingsDto) {
     console.log('params', params);
     const {
@@ -246,6 +252,72 @@ export class AdminBookingsService {
     };
   }
 
+  async updateBookingStatus(
+    bookingId: string,
+    updateStatusDto: UpdateBookingStatusDto,
+  ) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID ${bookingId} not found`);
+    }
+
+    // Update booking status
+    const updatedBooking = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: updateStatusDto.status },
+    });
+
+    // Create status history
+    await this.prisma.bookingStatusHistory.create({
+      data: {
+        bookingId: bookingId,
+        status: updateStatusDto.status,
+        reason: updateStatusDto.reason,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Booking status updated successfully',
+      data: {
+        id: updatedBooking.id,
+        status: updatedBooking.status,
+      },
+    };
+  }
+
+  async approveBookingOption(updateBookingOptionDto: UpdateBookingOptionDto) {
+    const { bookingDetailId, status } = updateBookingOptionDto;
+
+    let updateData = {};
+
+    if (status === 'lateCheckOut') {
+      updateData = { actualLateCheckout: true };
+    } else if (status === 'earlyCheckin') {
+      updateData = { actualEarlyCheckin: true };
+    } else {
+      throw new BadRequestException('Invalid status');
+    }
+
+    try {
+      const updatedBookingDetail = await this.prisma.bookingDetail.update({
+        where: { id: bookingDetailId },
+        data: updateData,
+      });
+
+      return {
+        success: true,
+        message: `${status === 'lateCheckOut' ? '레이트 체크아웃' : '얼리 체크인'} 요청이 승인되었습니다.`,
+        data: { updatedBookingDetail },
+      };
+    } catch (error) {
+      throw new BadRequestException('Failed to update booking detail');
+    }
+  }
+
   private async getBooking(bookingId: string, typesToInclude: Set<string>) {
     return this.prisma.booking.findUnique({
       where: { id: bookingId },
@@ -327,43 +399,6 @@ export class AdminBookingsService {
       id: booking.roomDetail.id,
       roomNumber: booking.roomDetail.roomNumber,
       roomName: booking.roomDetail.room.name,
-    };
-  }
-
-  async updateBookingStatus(
-    bookingId: string,
-    updateStatusDto: UpdateBookingStatusDto,
-  ) {
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: bookingId },
-    });
-
-    if (!booking) {
-      throw new NotFoundException(`Booking with ID ${bookingId} not found`);
-    }
-
-    // Update booking status
-    const updatedBooking = await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: updateStatusDto.status },
-    });
-
-    // Create status history
-    await this.prisma.bookingStatusHistory.create({
-      data: {
-        bookingId: bookingId,
-        status: updateStatusDto.status,
-        reason: updateStatusDto.reason,
-      },
-    });
-
-    return {
-      success: true,
-      message: 'Booking status updated successfully',
-      data: {
-        id: updatedBooking.id,
-        status: updatedBooking.status,
-      },
     };
   }
 }

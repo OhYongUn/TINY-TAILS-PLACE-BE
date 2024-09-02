@@ -14,6 +14,7 @@ import { GetBookingsDto } from '@apps/rest/admin/dto/booking/get-bookings.dto';
 import { BookingStatus } from '@prisma/client';
 import { ReservationDetailType } from '@apps/rest/admin/types/type';
 import { UpdateBookingStatusDto } from '@apps/rest/admin/dto/booking/update-booking-status.dto';
+import { UpdateBookingOptionDto } from '@apps/rest/admin/dto/booking/update-booking-option.dto';
 
 @ApiTags('admin-bookings')
 @Controller('admin-bookings')
@@ -105,9 +106,21 @@ export class AdminBookingsController {
     @Param('bookingId') bookingId: string,
     @Body() updateStatusDto: UpdateBookingStatusDto,
   ) {
-    return this.adminBookingsService.updateBookingStatus(
+    return await this.adminBookingsService.updateBookingStatus(
       bookingId,
       updateStatusDto,
+    );
+  }
+
+  @Patch('approve-option')
+  @ApiOperation({ summary: '예약 옵션 승인' })
+  @ApiResponse({ status: 200, description: '옵션 승인 성공' })
+  @ApiResponse({ status: 400, description: '잘못된 요청' })
+  async approveBookingOption(
+    @Body() updateBookingOptionDto: UpdateBookingOptionDto,
+  ) {
+    return await this.adminBookingsService.approveBookingOption(
+      updateBookingOptionDto,
     );
   }
 }
