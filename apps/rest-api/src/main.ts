@@ -3,6 +3,7 @@ import { RestApiModule } from './rest-api.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { SuccessResponseInterceptor } from '@app/common/interceptors/success-response.interceptor';
+import { ErrorsInterceptor } from '@app/common/interceptors/errors.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(RestApiModule);
@@ -23,7 +24,10 @@ async function bootstrap() {
 
   //const httpAdapterHost = app.get(HttpAdapterHost);
   //app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
-  app.useGlobalInterceptors(new SuccessResponseInterceptor());
+  app.useGlobalInterceptors(
+    new SuccessResponseInterceptor(),
+    new ErrorsInterceptor(),
+  );
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);

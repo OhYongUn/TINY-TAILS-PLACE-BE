@@ -5,14 +5,22 @@ import { AdminRolesController } from '@apps/rest/admin/controllers/admin-roles.c
 import { AdminRolesService } from '@apps/rest/admin/services/admin-roles.service';
 import { AdminUsersService } from '@apps/rest/admin/services/admin-users.service';
 import { AdminBookingsService } from '@apps/rest/admin/services/admin-bookings.service';
+import { AdminPaymentsService } from '@apps/rest/admin/services/admin-payments.service';
+import { AdminPaymentsController } from '@apps/rest/admin/controllers/admin-payments.controller';
 
 @Module({
   controllers: [
     AdminUsersController,
     AdminBookingsController,
     AdminRolesController,
+    AdminPaymentsController,
   ],
-  providers: [AdminUsersService, AdminRolesService, AdminBookingsService],
+  providers: [
+    AdminUsersService,
+    AdminRolesService,
+    AdminBookingsService,
+    AdminPaymentsService,
+  ],
   exports: [AdminRolesService, AdminUsersService],
 })
 export class AdminModule {}
