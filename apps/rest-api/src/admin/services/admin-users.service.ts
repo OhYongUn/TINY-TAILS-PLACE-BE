@@ -10,6 +10,7 @@ import { UserNotFoundException } from '@app/common/auth/authException/authExcept
 import { CreateAdminDto } from '@app/common/auth/dto/create-admin.dto';
 import { UserExceptions } from '@app/common/exceptions/users/user-exceptions';
 import * as bcryptjs from 'bcryptjs';
+import { SearchParamsDto } from '@apps/rest/admin/dto/search-params.dto';
 
 @Injectable()
 export class AdminUsersService {
@@ -127,5 +128,62 @@ export class AdminUsersService {
         throw new InternalServerErrorException('Failed to update user');
       }
     }
+  }
+
+  async getUsers(params: SearchParamsDto) {
+    const {
+      searchOption,
+      searchQuery,
+      sortOption,
+      page = 1,
+      pageSize = 10,
+    } = params;
+    const where: Prisma.UserWhereInput = {};
+    if (searchOption && searchQuery) {
+      switch (searchOption) {
+        case 'name':
+          where.name = { contains: searchQuery };
+          break;
+        case 'email':
+          where.email = { contains: searchQuery };
+          break;
+        case 'phone':
+          where.phone = { contains: searchQuery };
+          break;
+      }
+    }
+    let orderBy: Prisma.UserOrderByWithRelationInput = { createdAt: 'desc' };
+
+    if (sortOption) {
+      const [field, direction] = sortOption.split('_') as [
+        string,
+        Prisma.SortOrder,
+      ];
+      if (field in Prisma.UserScalarFieldEnum) {
+        orderBy = { [field]: direction };
+      }
+    }
+    const totalCount = await this.prisma.user.count({ where });
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const users = await this.prisma.user.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        createdAt: true,
+      },
+    });
+    console.log('totalCount', totalCount);
+    return {
+      list: users,
+      totalPages,
+      currentPage: page,
+      totalCount,
+    };
   }
 }

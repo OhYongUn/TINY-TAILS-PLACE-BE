@@ -8,6 +8,7 @@ import { OrdersModule } from './orders/orders.module';
 import { PaymentModule } from '@apps/rest/payment/payment.module';
 import { RoomDetailModule } from './room-detail/room-detail.module';
 import { AdminModule } from './admin/admin.module';
+import { AuthModule } from '@app/common/auth/auth.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AdminModule } from './admin/admin.module';
     PaymentModule,
     RoomDetailModule,
     AdminModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],

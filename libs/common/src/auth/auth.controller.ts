@@ -177,7 +177,7 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: '사용자를 찾을 수 없음' })
   @ApiBody({ schema: { properties: { email: { type: 'string' } } } })
   @UseGuards(AdminAccessTokenGuard)
-  async logout(@GetUser() admin: Admin) {
+  async adminLogout(@GetUser() admin: Admin) {
     await this.authService.adminLogout(admin.email);
     return {
       data: null,
