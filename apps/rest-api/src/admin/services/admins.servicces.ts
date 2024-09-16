@@ -3,6 +3,10 @@ import { Admin, Department, Prisma } from '@prisma/client';
 import { PrismaService } from '@app/common/prisma/prisma.service';
 import { SearchParamsDto } from '@apps/rest/admin/dto/search-params.dto';
 
+interface DepartmentWithChildren extends Department {
+  children?: DepartmentWithChildren[];
+}
+
 @Injectable()
 export class AdminsService {
   constructor(private prisma: PrismaService) {}
@@ -101,19 +105,12 @@ export class AdminsService {
   }
 
   async getDepartments() {
-    console.log('getDepartments');
     const allDepartments = await this.prisma.department.findMany({
       where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        parentId: true,
-      },
     });
 
-    const departmentMap = new Map<string, Department>();
-    const rootDepartments: Department[] = [];
+    const departmentMap = new Map<string, DepartmentWithChildren>();
+    const rootDepartments: DepartmentWithChildren[] = [];
 
     // 모든 부서를 맵에 추가
     allDepartments.forEach((dept) => {
@@ -125,19 +122,19 @@ export class AdminsService {
       if (dept.parentId) {
         const parent = departmentMap.get(dept.parentId);
         if (parent) {
-          parent.children.push(departmentMap.get(dept.id));
+          parent.children?.push(departmentMap.get(dept.id)!);
         }
       } else {
-        rootDepartments.push(departmentMap.get(dept.id));
+        rootDepartments.push(departmentMap.get(dept.id)!);
       }
     });
 
     // children 배열이 비어있으면 제거
-    const removeEmptyChildren = (dept: Department) => {
-      if (dept.children.length === 0) {
+    const removeEmptyChildren = (dept: DepartmentWithChildren) => {
+      if (dept.children?.length === 0) {
         delete dept.children;
       } else {
-        dept.children.forEach(removeEmptyChildren);
+        dept.children?.forEach(removeEmptyChildren);
       }
     };
 
