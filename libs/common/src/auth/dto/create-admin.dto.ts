@@ -1,7 +1,12 @@
-// create-admin.dto.ts
-
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MinLength,
+} from 'class-validator';
 
 export class CreateAdminDto {
   @ApiProperty({
@@ -20,29 +25,32 @@ export class CreateAdminDto {
   email: string;
 
   @ApiProperty({
-    description: '사용자 비밀번호 (암호화됨)',
+    description: '사용자 비밀번호',
     example: 'StrongP@ssw0rd!',
   })
   @IsString()
+  /*@Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/, {
+    message:
+      '비밀번호는 최소 8자 이상이며, 대문자, 소문자, 숫자를 포함해야 합니다.',
+  })*/
+  @MinLength(8, { message: '비밀번호는 최소 8자 이상이어야 합니다.' })
   password: string;
 
   @ApiProperty({
     description: '핸드폰번호',
-    example: '010-1231-1231',
+    example: '010-1234-5678',
   })
   @IsString()
+  @Matches(/^010-\d{4}-\d{4}$/, {
+    message: '올바른 전화번호 형식이 아닙니다. (예: 010-1234-5678)',
+  })
   phone: string;
 
   @ApiPropertyOptional({
     example: '123e4567-e89b-12d3-a456-426614174000',
     description: '부서 ID',
   })
+  @IsOptional()
+  @IsString()
   departmentId?: string;
-
-  @ApiPropertyOptional({
-    example: ['1', '2'],
-    description: '역할 ID 목록',
-    type: [String],
-  })
-  roleIds?: string[];
 }

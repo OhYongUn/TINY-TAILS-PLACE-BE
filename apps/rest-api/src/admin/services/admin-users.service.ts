@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -37,28 +38,18 @@ export class AdminUsersService {
   }
 
   async adminRegister(data: CreateAdminDto) {
-    const { email, password, roleIds, ...rest } = data;
+    const { email, password, departmentId, ...rest } = data;
 
     // 이메일 중복 체크
     const existingAdmin = await this.prisma.admin.findUnique({
       where: { email },
     });
     if (existingAdmin) {
-      throw UserExceptions.emailAlreadyExists();
+      throw new ConflictException('이미 존재하는 이메일입니다.');
     }
 
     // 비밀번호 해싱
     const hashedPassword = await bcryptjs.hash(password, 10);
-
-    // 역할 유효성 검사
-    if (roleIds && roleIds.length > 0) {
-      const validRoles = await this.prisma.role.findMany({
-        where: { id: { in: roleIds.map((id) => parseInt(id)) } },
-      });
-      if (validRoles.length !== roleIds.length) {
-        throw new Error('One or more invalid role IDs provided');
-      }
-    }
 
     try {
       // 트랜잭션 사용
@@ -68,18 +59,10 @@ export class AdminUsersService {
             ...rest,
             email,
             password: hashedPassword,
-            AdminRole: {
-              create:
-                roleIds?.map((roleId) => ({ roleId: parseInt(roleId) })) || [],
-            },
+            departmentId: departmentId,
           },
           include: {
             department: true,
-            AdminRole: {
-              include: {
-                role: true,
-              },
-            },
           },
         });
 
@@ -93,9 +76,11 @@ export class AdminUsersService {
     } catch (err: any) {
       this.logger.error(`Failed to create admin: ${err.message}`, err.stack);
       if (err.code === 'P2002') {
-        throw UserExceptions.emailAlreadyExists();
+        throw new ConflictException('이미 존재하는 이메일입니다.');
       }
-      throw new Error('Failed to create admin');
+      throw new InternalServerErrorException(
+        '관리자 등록 중 오류가 발생했습니다.',
+      );
     }
   }
 

@@ -80,6 +80,7 @@ export class AdminsService {
         },
       },
     });
+    console.log('admins->', admins);
 
     return {
       list: admins,
